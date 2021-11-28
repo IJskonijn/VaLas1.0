@@ -1,8 +1,9 @@
-//VALAS 1.0
+//VALAS Controller
 //722.6 GEARBOX CONTROLLER
 //SIMPLE MANUAL CONTROLLER WITH MINIMAL FEARURES FOR COMFORTABLE DRIVING
 //BY TONI LASSILA & TEEMU VAHTOLA
 //t6lato00@students.oamk.fi
+//Version 1.1 by IJskonijn
 
 //DOWNLOAD U8G2 TO YOUR ARDUINO LIBRARIRIES, FOR 0,91" OLED GEAR SCREEN!
 //OTHERWISE ERASE ALL U8G2 COMMANDS
@@ -53,21 +54,12 @@ void setup()
 
   delay(1500);
 
-  u8g2.begin(); //näyttökäynnistyy
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "VaLas");
-  u8g2.sendBuffer();
+  u8g2.begin();
+  displayOnScreen("VaLas");
   delay(1800);
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "Ver. 1.0");
-  u8g2.sendBuffer();
+  displayOnScreen("Ver. 1.1");
   delay(1500);
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 2");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 2");
 
   pinMode(inpin[0], INPUT_PULLUP);
   pinMode(inpin[1], INPUT_PULLUP);
@@ -199,10 +191,7 @@ void readswitch()
 void select_one()
 // 2 -> 1
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("1");
 
   analogWrite(linePressurePin, 40);
@@ -216,10 +205,7 @@ void select_one()
   analogWrite(shiftPressurePin, 0);
   digitalWrite(gear1And2Plus4And5Pin, LOW);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 1");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 1");
 
   status = 0;
 }
@@ -227,10 +213,7 @@ void select_one()
 void select_two()
 // 3 -> 2
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("2");
 
   analogWrite(linePressurePin, 180);
@@ -252,10 +235,7 @@ void select_two()
   analogWrite(linePressurePin, 20);
   analogWrite(shiftPressurePin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 2");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 2");
 
   status = 0;
 }
@@ -263,10 +243,7 @@ void select_two()
 void select_three()
 // 4 -> 3
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("3");
 
   analogWrite(linePressurePin, 140);
@@ -283,10 +260,7 @@ void select_three()
 
   delay(50);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 3");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 3");
 
   status = 0;
 }
@@ -294,10 +268,7 @@ void select_three()
 void select_four()
 // 5 -> 4
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("4");
 
   analogWrite(linePressurePin, 140);
@@ -312,10 +283,7 @@ void select_four()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 4");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 4");
 
   status = 0;
 }
@@ -323,10 +291,7 @@ void select_four()
 void select_five()
 // 4 -> 5
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("5");
 
   analogWrite(linePressurePin, 100);
@@ -341,10 +306,7 @@ void select_five()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, LOW);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 5");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 5");
 
   status = 0;
 }
@@ -352,10 +314,7 @@ void select_five()
 void select_fivetcc()
 // 5 -> 5 OD
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("5tcc");
 
   delay(400);
@@ -365,10 +324,7 @@ void select_fivetcc()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, HIGH);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 5+");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 5+");
 
   status = 0;
 }
@@ -376,10 +332,7 @@ void select_fivetcc()
 void select_fivedown()
 // 5 OD -> 5
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("5");
 
   delay(400);
@@ -389,10 +342,7 @@ void select_fivedown()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 5");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 5");
 
   status = 0;
 }
@@ -400,10 +350,7 @@ void select_fivedown()
 void select_twoup()
 // 1 -> 2
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("2");
 
   analogWrite(linePressurePin, 80);
@@ -418,10 +365,7 @@ void select_twoup()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 2");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 2");
 
   status = 0;
 }
@@ -429,10 +373,7 @@ void select_twoup()
 void select_threeup()
 // 2 -> 3
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("3");
 
   analogWrite(linePressurePin, 80);
@@ -447,10 +388,7 @@ void select_threeup()
   digitalWrite(gear2And3Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 3");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 3");
 
   status = 0;
 }
@@ -458,10 +396,7 @@ void select_threeup()
 void select_fourup()
 // 3 -> 4
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "SHIFT");
-  u8g2.sendBuffer();
+  displayOnScreen("SHIFT");
   Serial.println("4");
 
   analogWrite(linePressurePin, 90);
@@ -476,10 +411,15 @@ void select_fourup()
   digitalWrite(gear3And4Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "GEAR 4");
-  u8g2.sendBuffer();
+  displayOnScreen("GEAR 4");
 
   status = 0;
+}
+
+void displayOnScreen(string stringToDisplay)
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, stringToDisplay);
+  u8g2.sendBuffer();
 }
