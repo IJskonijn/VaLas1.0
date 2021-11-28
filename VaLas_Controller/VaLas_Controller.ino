@@ -26,17 +26,17 @@
 
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
-const int inpin[2] = { 53, 50 };
-byte gear;
-
 //255/100*40=102
 //255/100*33=84
 
+byte gear;
 int up_shift = 1;
 int down_shift = 1;
 int old_upshift = 1;
 int old_downshift = 1;
 
+int upShiftPin = 53;
+int downShiftPin = 50;
 int gear1And2Plus4And5Pin = 33;   // 1-2, 4-5 switch    shift      LOW/HIGH
 int gear2And3Pin = 35;            // 2-3 switch         shift      LOW/HIGH
 int gear3And4Pin = 37;            // 3-4 switch         shift      LOW/HIGH
@@ -61,8 +61,8 @@ void setup()
   delay(1500);
   displayOnScreen("GEAR 2");
 
-  pinMode(inpin[0], INPUT_PULLUP);
-  pinMode(inpin[1], INPUT_PULLUP);
+  pinMode(upShiftPin, INPUT_PULLUP);
+  pinMode(downShiftPin, INPUT_PULLUP);
 
   pinMode(gear1And2Plus4And5Pin, OUTPUT);
   pinMode(gear2And3Pin, OUTPUT);
@@ -159,8 +159,7 @@ void loop()
 
 void readswitch()
 {
-  up_shift = digitalRead(inpin[0]);
-
+  up_shift = digitalRead(upShiftPin);
   // check upshift transition
   if ((up_shift == 0) && (old_upshift == 1))
   {
@@ -169,8 +168,7 @@ void readswitch()
   }
   old_upshift = up_shift;
 
-  down_shift = digitalRead(inpin[1]);
-
+  down_shift = digitalRead(downShiftPin);
   // check downshift transition
   if ((down_shift == 0) && (old_downshift == 1))
   {
@@ -178,6 +176,14 @@ void readswitch()
     delay(50);
   }
   old_downshift = down_shift;
+}
+
+void displayOnScreen(const char* stringToDisplay)
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, stringToDisplay);
+  u8g2.sendBuffer();
 }
 
 // GEAR SETTINGS
@@ -414,12 +420,4 @@ void select_fourup()
   displayOnScreen("GEAR 4");
 
   status = 0;
-}
-
-void displayOnScreen(const char* stringToDisplay)
-{
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplay);
-  u8g2.sendBuffer();
 }
