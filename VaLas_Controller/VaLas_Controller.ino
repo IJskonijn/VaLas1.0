@@ -5,7 +5,7 @@
 //t6lato00@students.oamk.fi
 //Version 1.1 by IJskonijn
 
-//DOWNLOAD U8G2 TO YOUR ARDUINO LIBRARIRIES, FOR 0,91" OLED GEAR SCREEN!
+//DOWNLOAD U8G2 TO YOUR ARDUINO LIBRARIRIES, FOR 0,91" / 0,96" OLED GEAR SCREEN!
 //OTHERWISE ERASE ALL U8G2 COMMANDS
 
 //LICENCE: CC BY-NC 3.0 https://creativecommons.org/licenses/by-nc/3.0/deed.en
@@ -32,7 +32,8 @@
 #include <SPI.h>
 #include <Wire.h>
 
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0); // 128x64 for 0.96" OLED
+// 128x64 for 0.96" OLED
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
 typedef enum GearLeverPosition
 {
@@ -52,7 +53,7 @@ int down_shift = 0;
 int old_upshift = 0;
 int old_downshift = 0;
 
-int upShiftPin = 53;
+int upShiftPin = 19; //53;
 int downShiftPin = 50;
 int gearLeverPotPin = 4;          // Read potentiometer value to determine if in P, R, N, D
 
@@ -107,7 +108,7 @@ void loop()
   // While stopped, a switch as been pressed when in Drive
 
   // Check for the up_shift
-  if ((up_shift == 0) && (status == 1))
+  if (currentLeverPosition == Drive && (up_shift == 0) && (status == 1))
   {
     gear++;
     delay(100);
@@ -143,7 +144,7 @@ void loop()
   }
 
   // check for the down_shift
-  if ((down_shift == 0) && (status == 1))
+  if (currentLeverPosition == Drive && (down_shift == 0) && (status == 1))
   {
     gear--;
     delay(100);
@@ -187,6 +188,7 @@ void readSwitch()
   {
     status = 1;
     delay(50);
+    Serial.println("Upshift pressed");
   }
   old_upshift = up_shift;
 
@@ -196,6 +198,7 @@ void readSwitch()
   {
     status = 1;
     delay(50);
+    Serial.println("Downshift pressed");
   }
   old_downshift = down_shift;
 }
@@ -230,17 +233,21 @@ void processLeverValue(GearLeverPosition position)
   if (currentLeverPosition == position)
     return;
 
+  // Set new value and start fresh from gear 2
   currentLeverPosition = position;
+  resetToGear2();
+
+  // Log and display
   String printVar = ToString(position) + " selected";
+  String screenVar = " - " + printVar.substring(0,1) + " -"; // Take first character. Example Park would print: - P -
   Serial.println(printVar);
-  
-  // if (position != Drive)
-  // {
-    String screenVar = "- " + printVar.substring(0,1) + " -"; // Take first character. Example Park would print: - P -
-    displayOnScreen(screenVar.c_str());
-  // }
-  
-  // TODO: Reset to gear 2
+  displayOnScreen(screenVar.c_str());
+
+  if (position == Drive)
+  {
+    delay(500);
+    displayOnScreen("  D: 2");
+  }
 }
 
 void displayOnScreen(const char* stringToDisplay)
@@ -249,6 +256,27 @@ void displayOnScreen(const char* stringToDisplay)
   u8g2.setFont(u8g2_font_logisoso28_tr);
   u8g2.drawStr(1, 29, stringToDisplay);
   u8g2.sendBuffer();
+}
+
+void resetToGear2()
+{
+  // Reset all shifting vars
+  up_shift = 0;
+  down_shift = 0;
+  old_upshift = 0;
+  old_downshift = 0;
+
+  //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
+  // if (gear <= 1)
+  // {
+  //   select_twoup();
+  // }
+  // else
+  // {
+  //   select_two();
+  // }
+  
+  gear = 2;
 }
 
 // GEAR SETTINGS
@@ -262,8 +290,8 @@ void displayOnScreen(const char* stringToDisplay)
 void select_one()
 // 2 -> 1
 {
-  displayOnScreen("SHIFT");
-  Serial.println("1");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 1");
 
   //analogWrite(linePressurePin, 40);
   //analogWrite(shiftPressurePin, 40);
@@ -276,7 +304,7 @@ void select_one()
   //analogWrite(shiftPressurePin, 0);
   digitalWrite(gear1And2Plus4And5Pin, LOW);
 
-  displayOnScreen("GEAR 1");
+  displayOnScreen("  D: 1");
 
   status = 0;
 }
@@ -284,8 +312,8 @@ void select_one()
 void select_two()
 // 3 -> 2
 {
-  displayOnScreen("SHIFT");
-  Serial.println("2");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 2");
 
   //analogWrite(linePressurePin, 180);
   //analogWrite(shiftPressurePin, 180);
@@ -306,7 +334,7 @@ void select_two()
   //analogWrite(linePressurePin, 20);
   //analogWrite(shiftPressurePin, 0);
 
-  displayOnScreen("GEAR 2");
+  displayOnScreen("  D: 2");
 
   status = 0;
 }
@@ -314,8 +342,8 @@ void select_two()
 void select_three()
 // 4 -> 3
 {
-  displayOnScreen("SHIFT");
-  Serial.println("3");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 3");
 
   //analogWrite(linePressurePin, 140);
   //analogWrite(shiftPressurePin, 140);
@@ -331,7 +359,7 @@ void select_three()
 
   delay(50);
 
-  displayOnScreen("GEAR 3");
+  displayOnScreen("  D: 3");
 
   status = 0;
 }
@@ -339,8 +367,8 @@ void select_three()
 void select_four()
 // 5 -> 4
 {
-  displayOnScreen("SHIFT");
-  Serial.println("4");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 4");
 
   //analogWrite(linePressurePin, 140);
   //analogWrite(shiftPressurePin, 140);
@@ -354,7 +382,7 @@ void select_four()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  displayOnScreen("GEAR 4");
+  displayOnScreen("  D: 4");
 
   status = 0;
 }
@@ -362,7 +390,7 @@ void select_four()
 void select_five()
 // 4 -> 5
 {
-  displayOnScreen("SHIFT");
+  displayOnScreen(" SHIFT");
   Serial.println("5");
 
   //analogWrite(linePressurePin, 100);
@@ -377,7 +405,7 @@ void select_five()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, LOW);
 
-  displayOnScreen("GEAR 5");
+  displayOnScreen("  D: 5");
 
   status = 0;
 }
@@ -385,8 +413,8 @@ void select_five()
 void select_fivetcc()
 // 5 -> 5 OD
 {
-  displayOnScreen("SHIFT");
-  Serial.println("5tcc");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 5tcc");
 
   delay(400);
 
@@ -395,7 +423,7 @@ void select_fivetcc()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, HIGH);
 
-  displayOnScreen("GEAR 5+");
+  displayOnScreen("  D: 5+");
 
   status = 0;
 }
@@ -403,8 +431,8 @@ void select_fivetcc()
 void select_fivedown()
 // 5 OD -> 5
 {
-  displayOnScreen("SHIFT");
-  Serial.println("5");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 5");
 
   delay(400);
 
@@ -413,7 +441,7 @@ void select_fivedown()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  displayOnScreen("GEAR 5");
+  displayOnScreen("  D: 5");
 
   status = 0;
 }
@@ -421,8 +449,8 @@ void select_fivedown()
 void select_twoup()
 // 1 -> 2
 {
-  displayOnScreen("SHIFT");
-  Serial.println("2");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 2");
 
   //analogWrite(linePressurePin, 80);
   //analogWrite(shiftPressurePin, 90);
@@ -436,7 +464,7 @@ void select_twoup()
   digitalWrite(gear1And2Plus4And5Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  displayOnScreen("GEAR 2");
+  displayOnScreen("  D: 2");
 
   status = 0;
 }
@@ -444,8 +472,8 @@ void select_twoup()
 void select_threeup()
 // 2 -> 3
 {
-  displayOnScreen("SHIFT");
-  Serial.println("3");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 3");
 
   //analogWrite(linePressurePin, 80);
   //analogWrite(shiftPressurePin, 80);
@@ -459,7 +487,7 @@ void select_threeup()
   digitalWrite(gear2And3Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  displayOnScreen("GEAR 3");
+  displayOnScreen("  D: 3");
 
   status = 0;
 }
@@ -467,8 +495,8 @@ void select_threeup()
 void select_fourup()
 // 3 -> 4
 {
-  displayOnScreen("SHIFT");
-  Serial.println("4");
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 4");
 
   //analogWrite(linePressurePin, 90);
   //analogWrite(shiftPressurePin, 100);
@@ -482,7 +510,7 @@ void select_fourup()
   digitalWrite(gear3And4Pin, LOW);
   digitalWrite(turbineLockupPin, 0);
 
-  displayOnScreen("GEAR 4");
+  displayOnScreen("  D: 4");
 
   status = 0;
 }
