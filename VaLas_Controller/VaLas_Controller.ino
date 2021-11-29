@@ -32,7 +32,7 @@
 #include <SPI.h>
 #include <Wire.h>
 
-U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0); // 128x64 for 0.96" OLED
 
 typedef enum GearLeverPosition
 {
@@ -47,10 +47,10 @@ typedef enum GearLeverPosition
 //255/100*33=84
 
 byte gear;
-int up_shift = 1;
-int down_shift = 1;
-int old_upshift = 1;
-int old_downshift = 1;
+int up_shift = 0;
+int down_shift = 0;
+int old_upshift = 0;
+int old_downshift = 0;
 
 int upShiftPin = 53;
 int downShiftPin = 50;
@@ -72,12 +72,13 @@ void setup()
   Serial.write("Begin program");
   Serial.write("\n");
 
-  delay(1500);
+  delay(500);
 
   u8g2.begin();
   displayOnScreen("VaLas");
-  delay(1800);
+  delay(1500);
   displayOnScreen("Ver. 1.1");
+  delay(1500);
 
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
@@ -218,10 +219,6 @@ void readGearLeverPosition()
     break;
   
   default: // I guess something went wrong...
-    // if (currentLeverPosition != Unknown)
-    // {
-    //   currentLeverPosition = Unknown;
-    // }
     break;
   }
 
@@ -237,11 +234,11 @@ void processLeverValue(GearLeverPosition position)
   String printVar = ToString(position) + " selected";
   Serial.println(printVar);
   
-  if (position != Drive)
-  {
+  // if (position != Drive)
+  // {
     String screenVar = "- " + printVar.substring(0,1) + " -"; // Take first character. Example Park would print: - P -
     displayOnScreen(screenVar.c_str());
-  }
+  // }
   
   // TODO: Reset to gear 2
 }
