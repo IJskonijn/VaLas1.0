@@ -44,6 +44,13 @@ typedef enum GearLeverPosition
   Unknown
 };
 
+typedef enum ShiftRequest
+{
+  NoShift,
+  UpShift,
+  DownShift
+};
+
 //255/100*40=102
 //255/100*33=84
 
@@ -53,19 +60,19 @@ int down_shift = 0;
 int old_upshift = 0;
 int old_downshift = 0;
 
-int upShiftPin = 19; //53;
-int downShiftPin = 50;
+int upShiftPin = 19;
+int downShiftPin = 18;
 int gearLeverPotPin = 4;          // Read potentiometer value to determine if in P, R, N, D
 
-int gear1And2Plus4And5Pin = 33;   // 1-2, 4-5 switch    shift      LOW/HIGH
-int gear2And3Pin = 35;            // 2-3 switch         shift      LOW/HIGH
-int gear3And4Pin = 37;            // 3-4 switch         shift      LOW/HIGH
-int linePressurePin = 39;         // Line pressure      MOD_PC     min-max 255-0
-int shiftPressurePin = 41;        // Shift pressure     SHIFT_PC   min-max 255-0
-int turbineLockupPin = 43;        // Turbine lockup     TCC        min-max 0-255
+int y3Pin = 33;     // 1-2, 4-5 switch    shift      LOW/HIGH
+int y4Pin = 35;     // 2-3 switch         shift      LOW/HIGH
+int y5Pin = 37;     // 3-4 switch         shift      LOW/HIGH
+int mpcPin = 39;    // Line pressure      MOD_PC     min-max 255-0
+int spcPin = 41;    // Shift pressure     SHIFT_PC   min-max 255-0
+int tccPin = 43;    // Turbine lockup     TCC        min-max 0-255
 
-boolean status = 0;
 GearLeverPosition currentLeverPosition;
+ShiftRequest currentShiftRequest;
 
 void setup()
 {
@@ -84,14 +91,15 @@ void setup()
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
 
-  pinMode(gear1And2Plus4And5Pin, OUTPUT);
-  pinMode(gear2And3Pin, OUTPUT);
-  pinMode(gear3And4Pin, OUTPUT);
-  pinMode(linePressurePin, OUTPUT);
-  pinMode(shiftPressurePin, OUTPUT);
-  pinMode(turbineLockupPin, OUTPUT);
+  pinMode(y3Pin, OUTPUT);
+  pinMode(y4Pin, OUTPUT);
+  pinMode(y5Pin, OUTPUT);
+  pinMode(mpcPin, OUTPUT);
+  pinMode(spcPin, OUTPUT);
+  pinMode(tccPin, OUTPUT);
 
   currentLeverPosition = Unknown;
+  currentShiftRequest = NoShift;
   gear = 2;
 }
 
@@ -100,7 +108,7 @@ void loop()
   readGearLeverPosition();
   readSwitch();
 
-  while (currentLeverPosition != Drive && status == 0)
+  while (currentLeverPosition != Drive && currentShiftRequest != NoShift)
   {
     readGearLeverPosition();
     readSwitch();
@@ -108,13 +116,13 @@ void loop()
   // While stopped, a switch as been pressed when in Drive
 
   // Check for the up_shift
-  if (currentLeverPosition == Drive && (up_shift == 0) && (status == 1))
+  if (currentLeverPosition == Drive && currentShiftRequest == UpShift)
   {
-    gear++;
-    delay(100);
-
     if ((gear >= 1) && (gear <= 6))
     {
+      gear++;
+      delay(100);
+
       switch (gear)
       {
       case 1:
@@ -135,22 +143,22 @@ void loop()
       case 6:
         select_fivetcc();
         break;
+      default:
+        gear = 6;
+        currentShiftRequest = NoShift;
+        return;
       }
-    }
-    else
-    {
-      gear = 6;
     }
   }
 
   // check for the down_shift
-  if (currentLeverPosition == Drive && (down_shift == 0) && (status == 1))
+  else if (currentLeverPosition == Drive && currentShiftRequest == DownShift)
   {
-    gear--;
-    delay(100);
-
     if ((gear >= 1) && (gear <= 6))
     {
+      gear--;
+      delay(100);
+
       switch (gear)
       {
       case 1:
@@ -171,32 +179,36 @@ void loop()
       case 6:
         select_fivetcc();
         break;
+      default:
+        gear = 1;
+        currentShiftRequest = NoShift;
+        return;
       }
-    }
-    else
-    {
-      gear = 1;
     }
   }
 }
 
 void readSwitch()
 {
-  up_shift = digitalRead(upShiftPin);
+  // Do nothing if not in Drive
+  if (currentLeverPosition != Drive)
+    return;
+
   // check upshift transition
+  up_shift = digitalRead(upShiftPin);
   if ((up_shift == 0) && (old_upshift == 1))
   {
-    status = 1;
+    currentShiftRequest = UpShift;
     delay(50);
     Serial.println("Upshift pressed");
   }
   old_upshift = up_shift;
 
-  down_shift = digitalRead(downShiftPin);
   // check downshift transition
+  down_shift = digitalRead(downShiftPin);
   if ((down_shift == 0) && (old_downshift == 1))
   {
-    status = 1;
+    currentShiftRequest = DownShift;
     delay(50);
     Serial.println("Downshift pressed");
   }
@@ -261,10 +273,11 @@ void displayOnScreen(const char* stringToDisplay)
 void resetToGear2()
 {
   // Reset all shifting vars
-  up_shift = 0;
-  down_shift = 0;
+  up_shift = 1;
+  down_shift = 1;
   old_upshift = 0;
   old_downshift = 0;
+  currentShiftRequest = NoShift;
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   // if (gear <= 1)
@@ -291,228 +304,228 @@ void select_one()
 // 2 -> 1
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 1");
+  Serial.println("Gear 1 -");
 
-  //analogWrite(linePressurePin, 40);
-  //analogWrite(shiftPressurePin, 40);
-  digitalWrite(gear1And2Plus4And5Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 40);
+  //analogWrite(spcPin, 40);
+  digitalWrite(y3Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(700);
 
-  //analogWrite(linePressurePin, 0);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
+  //analogWrite(mpcPin, 0);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
 
   displayOnScreen("  D: 1");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_two()
 // 3 -> 2
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 2");
+  Serial.println("Gear 2 -");
 
-  //analogWrite(linePressurePin, 180);
-  //analogWrite(shiftPressurePin, 180);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 180);
+  //analogWrite(spcPin, 180);
+  digitalWrite(tccPin, 0);
 
   delay(20);
 
-  digitalWrite(gear2And3Pin, HIGH);
+  digitalWrite(y4Pin, HIGH);
 
   delay(600);
 
-  //analogWrite(linePressurePin, 70);
-  //analogWrite(shiftPressurePin, 70);
-  digitalWrite(gear2And3Pin, LOW);
+  //analogWrite(mpcPin, 70);
+  //analogWrite(spcPin, 70);
+  digitalWrite(y4Pin, LOW);
 
   delay(50);
 
-  //analogWrite(linePressurePin, 20);
-  //analogWrite(shiftPressurePin, 0);
+  //analogWrite(mpcPin, 20);
+  //analogWrite(spcPin, 0);
 
   displayOnScreen("  D: 2");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_three()
 // 4 -> 3
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 3");
+  Serial.println("Gear 3 -");
 
-  //analogWrite(linePressurePin, 140);
-  //analogWrite(shiftPressurePin, 140);
-  digitalWrite(gear3And4Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 140);
+  //analogWrite(spcPin, 140);
+  digitalWrite(y5Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(shiftPressurePin, 0);
-  //analogWrite(linePressurePin, 0);
-  digitalWrite(gear3And4Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(spcPin, 0);
+  //analogWrite(mpcPin, 0);
+  digitalWrite(y5Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   delay(50);
 
   displayOnScreen("  D: 3");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_four()
 // 5 -> 4
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 4");
+  Serial.println("Gear 4 -");
 
-  //analogWrite(linePressurePin, 140);
-  //analogWrite(shiftPressurePin, 140);
-  digitalWrite(gear1And2Plus4And5Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 140);
+  //analogWrite(spcPin, 140);
+  digitalWrite(y3Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(linePressurePin, 0);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 0);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 4");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_five()
 // 4 -> 5
 {
   displayOnScreen(" SHIFT");
-  Serial.println("5");
+  Serial.println("Gear 5 +");
 
-  //analogWrite(linePressurePin, 100);
-  //analogWrite(shiftPressurePin, 120);
-  digitalWrite(gear1And2Plus4And5Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 100);
+  //analogWrite(spcPin, 120);
+  digitalWrite(y3Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(linePressurePin, 15);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
-  digitalWrite(turbineLockupPin, LOW);
+  //analogWrite(mpcPin, 15);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, LOW);
 
   displayOnScreen("  D: 5");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_fivetcc()
 // 5 -> 5 OD
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 5tcc");
+  Serial.println("Gear 5tcc +");
 
   delay(400);
 
-  //analogWrite(linePressurePin, 25);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
-  digitalWrite(turbineLockupPin, HIGH);
+  //analogWrite(mpcPin, 25);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, HIGH);
 
   displayOnScreen("  D: 5+");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_fivedown()
 // 5 OD -> 5
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 5");
+  Serial.println("Gear 5 -");
 
   delay(400);
 
-  //analogWrite(linePressurePin, 15);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 15);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 5");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_twoup()
 // 1 -> 2
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 2");
+  Serial.println("Gear 2 +");
 
-  //analogWrite(linePressurePin, 80);
-  //analogWrite(shiftPressurePin, 90);
-  digitalWrite(gear1And2Plus4And5Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 80);
+  //analogWrite(spcPin, 90);
+  digitalWrite(y3Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(linePressurePin, 0);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear1And2Plus4And5Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 0);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 2");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_threeup()
 // 2 -> 3
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 3");
+  Serial.println("Gear 3 +");
 
-  //analogWrite(linePressurePin, 80);
-  //analogWrite(shiftPressurePin, 80);
-  digitalWrite(gear2And3Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 80);
+  //analogWrite(spcPin, 80);
+  digitalWrite(y4Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(linePressurePin, 0);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear2And3Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 0);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y4Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 3");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 void select_fourup()
 // 3 -> 4
 {
   displayOnScreen(" SHIFT");
-  Serial.println("Gear 4");
+  Serial.println("Gear 4 +");
 
-  //analogWrite(linePressurePin, 90);
-  //analogWrite(shiftPressurePin, 100);
-  digitalWrite(gear3And4Pin, HIGH);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 90);
+  //analogWrite(spcPin, 100);
+  digitalWrite(y5Pin, HIGH);
+  digitalWrite(tccPin, 0);
 
   delay(1200);
 
-  //analogWrite(linePressurePin, 0);
-  //analogWrite(shiftPressurePin, 0);
-  digitalWrite(gear3And4Pin, LOW);
-  digitalWrite(turbineLockupPin, 0);
+  //analogWrite(mpcPin, 0);
+  //analogWrite(spcPin, 0);
+  digitalWrite(y5Pin, LOW);
+  digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 4");
 
-  status = 0;
+  currentShiftRequest = NoShift;
 }
 
 inline const String ToString(GearLeverPosition v)
