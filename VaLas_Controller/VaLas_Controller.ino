@@ -65,8 +65,8 @@ int downShiftPin = 18;
 int gearLeverPotPin = 4;          // Read potentiometer value to determine if in P, R, N, D
 
 int y3Pin = 33;     // 1-2, 4-5 switch    shift      LOW/HIGH
-int y4Pin = 35;     // 2-3 switch         shift      LOW/HIGH
-int y5Pin = 37;     // 3-4 switch         shift      LOW/HIGH
+int y4Pin = 35;     // 3-4 switch         shift      LOW/HIGH
+int y5Pin = 37;     // 2-3 switch         shift      LOW/HIGH
 int mpcPin = 39;    // Line pressure      MOD_PC     min-max 255-0
 int spcPin = 41;    // Shift pressure     SHIFT_PC   min-max 255-0
 int tccPin = 43;    // Turbine lockup     TCC        min-max 0-255
@@ -262,14 +262,6 @@ void processLeverValue(GearLeverPosition position)
   }
 }
 
-void displayOnScreen(const char* stringToDisplay)
-{
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplay);
-  u8g2.sendBuffer();
-}
-
 void resetToGear2()
 {
   // Reset all shifting vars
@@ -280,14 +272,23 @@ void resetToGear2()
   currentShiftRequest = NoShift;
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
-  // if (gear <= 1)
-  // {
-  //   select_twoup();
-  // }
-  // else
-  // {
-  //   select_two();
-  // }
+  if (currentLeverPosition == Park || currentLeverPosition == Neutral)
+  {
+    //analogWrite(mpcPin, (255/100*40)); //40%
+    //analogWrite(spcPin, (255/100*33)); //33%
+    //analogWrite(y4Pin, (255/100*30)); //30%, Back to idle
+
+    // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
+    // if (currentLeverPosition == Park)
+    //   analogWrite(y4Pin, 255);
+    // else
+    //   analogWrite(y4Pin, 0);
+  }
+  else
+  {
+    //analogWrite(y4Pin, 0);
+    //analogWrite(spcPin, 0); // Set to 0 in D and R
+  }
   
   gear = 2;
 }
@@ -334,13 +335,13 @@ void select_two()
 
   delay(20);
 
-  digitalWrite(y4Pin, HIGH);
+  digitalWrite(y5Pin, HIGH);
 
   delay(600);
 
   //analogWrite(mpcPin, 70);
   //analogWrite(spcPin, 70);
-  digitalWrite(y4Pin, LOW);
+  digitalWrite(y5Pin, LOW);
 
   delay(50);
 
@@ -360,14 +361,14 @@ void select_three()
 
   //analogWrite(mpcPin, 140);
   //analogWrite(spcPin, 140);
-  digitalWrite(y5Pin, HIGH);
+  digitalWrite(y4Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
   //analogWrite(spcPin, 0);
   //analogWrite(mpcPin, 0);
-  digitalWrite(y5Pin, LOW);
+  digitalWrite(y4Pin, LOW);
   digitalWrite(tccPin, 0);
 
   delay(50);
@@ -490,14 +491,14 @@ void select_threeup()
 
   //analogWrite(mpcPin, 80);
   //analogWrite(spcPin, 80);
-  digitalWrite(y4Pin, HIGH);
+  digitalWrite(y5Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
   //analogWrite(mpcPin, 0);
   //analogWrite(spcPin, 0);
-  digitalWrite(y4Pin, LOW);
+  digitalWrite(y5Pin, LOW);
   digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 3");
@@ -513,19 +514,27 @@ void select_fourup()
 
   //analogWrite(mpcPin, 90);
   //analogWrite(spcPin, 100);
-  digitalWrite(y5Pin, HIGH);
+  digitalWrite(y4Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(1200);
 
   //analogWrite(mpcPin, 0);
   //analogWrite(spcPin, 0);
-  digitalWrite(y5Pin, LOW);
+  digitalWrite(y4Pin, LOW);
   digitalWrite(tccPin, 0);
 
   displayOnScreen("  D: 4");
 
   currentShiftRequest = NoShift;
+}
+
+void displayOnScreen(const char* stringToDisplay)
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, stringToDisplay);
+  u8g2.sendBuffer();
 }
 
 inline const String ToString(GearLeverPosition v)
