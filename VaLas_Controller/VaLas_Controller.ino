@@ -51,6 +51,9 @@ typedef enum ShiftRequest
   DownShift
 };
 
+const int n2PulsesPerRev = 60;
+const int n3PulsesPerRev = 60;
+
 byte gear;
 int up_shift = 0;
 int down_shift = 0;
@@ -549,6 +552,11 @@ inline const String ToString(GearLeverPosition v)
 
 /// Optional stuff
 
+void toggleHighIdle()
+{
+  // Set pwm signal to mechanical pump ELR pins
+}
+
 // Reading oil temp sensor / P-N switch (same input pin, see page 27: http://www.all-trans.by/assets/site/files/mercedes/722.6.1.pdf)
 int readAtfTemp()
 {
@@ -603,6 +611,13 @@ int readRpm()
 {  
   // Read stock OM606 rpm sensor here
   // Calculation: frequency / 144 (flywheel tooth) * 60 = RPM.
+
+  // if (rpmSpeed)
+  //   {
+  //     // speed based on engine rpm
+  //     vehicleSpeedRPM = tireCircumference * curRPM / (ratioFromGear(gear) * config.diffRatio) / 1000000 * 60;
+  //     speedValue = vehicleSpeedRPM;
+  //   } 
 }
 
 int readN2()
