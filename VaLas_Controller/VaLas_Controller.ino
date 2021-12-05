@@ -70,7 +70,13 @@ int y5Pin = 37;             // 2-3 switch         shift      LOW/HIGH
 int mpcPin = 39;            // Line pressure      MOD_PC     min-max 255-0
 int spcPin = 41;            // Shift pressure     SHIFT_PC   min-max 255-0
 int tccPin = 43;            // Turbine lockup     TCC        min-max 0-255
-int atfTempPin = 40;        // ATF temp / P-N switch  
+int atfTempPin = 40;        // ATF temp / P-N switch 
+
+int pwmFreq = 1000;
+int mpcChannel = 0;
+int spcChannel = 1;
+int tccChannel = 2;
+int y4Channel = 3;
 
 GearLeverPosition currentLeverPosition;
 ShiftRequest currentShiftRequest;
@@ -98,6 +104,18 @@ void setup()
   pinMode(mpcPin, OUTPUT);
   pinMode(spcPin, OUTPUT);
   pinMode(tccPin, OUTPUT);
+  
+  // Assign led pins to a channel
+  ledcAttachPin(mpcPin, mpcChannel);
+  ledcAttachPin(spcPin, spcChannel);
+  ledcAttachPin(tccPin, tccChannel);
+  ledcAttachPin(y4Pin, y4Channel);
+
+  // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
+  ledcSetup(0, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
+  ledcSetup(1, pwmFreq, 8);
+  ledcSetup(2, pwmFreq, 8);
+  ledcSetup(3, pwmFreq, 8);
 
   currentLeverPosition = Unknown;
   currentShiftRequest = NoShift;
@@ -275,20 +293,20 @@ void resetToGear2()
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   if (currentLeverPosition == Park || currentLeverPosition == Neutral)
   {
-    //analogWrite(mpcPin, (255/100*40)); //40%
-    //analogWrite(spcPin, (255/100*33)); //33%
-    //analogWrite(y4Pin, (255/100*30)); //30%, Back to idle
+    ledcWrite(mpcChannel, (255/100*40)); //40%
+    ledcWrite(spcChannel, (255/100*33)); //33%
+    ledcWrite(y4Channel, (255/100*30)); //30%, Back to idle
 
     // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
-    // if (currentLeverPosition == Park)
-    //   analogWrite(y4Pin, 255);
-    // else
-    //   analogWrite(y4Pin, 0);
+    if (currentLeverPosition == Park)
+      ledcWrite(y4Channel, 255);
+    else
+      ledcWrite(y4Channel, 0);
   }
   else
   {
-    //analogWrite(y4Pin, 0);
-    //analogWrite(spcPin, 0); // Set to 0 in D and R
+    ledcWrite(y4Channel, 0);
+    ledcWrite(spcChannel, 0); // Set to 0 in D and R
   }
   
   gear = 2;
@@ -308,15 +326,15 @@ void select_one()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 1 -");
 
-  //analogWrite(mpcPin, 40);
-  //analogWrite(spcPin, 40);
+  ledcWrite(mpcChannel, 40);
+  ledcWrite(spcChannel, 40);
   digitalWrite(y3Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(700);
 
-  //analogWrite(mpcPin, 0);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 0);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
 
   displayOnScreen("  D: 1");
@@ -330,8 +348,8 @@ void select_two()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 2 -");
 
-  //analogWrite(mpcPin, 180);
-  //analogWrite(spcPin, 180);
+  ledcWrite(mpcChannel, 180);
+  ledcWrite(spcChannel, 180);
   digitalWrite(tccPin, 0);
 
   delay(20);
@@ -340,14 +358,14 @@ void select_two()
 
   delay(600);
 
-  //analogWrite(mpcPin, 70);
-  //analogWrite(spcPin, 70);
+  ledcWrite(mpcChannel, 70);
+  ledcWrite(spcChannel, 70);
   digitalWrite(y5Pin, LOW);
 
   delay(50);
 
-  //analogWrite(mpcPin, 20);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 20);
+  ledcWrite(spcChannel, 0);
 
   displayOnScreen("  D: 2");
 
@@ -360,15 +378,15 @@ void select_three()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 3 -");
 
-  //analogWrite(mpcPin, 140);
-  //analogWrite(spcPin, 140);
+  ledcWrite(mpcChannel, 140);
+  ledcWrite(spcChannel, 140);
   digitalWrite(y4Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(spcPin, 0);
-  //analogWrite(mpcPin, 0);
+  ledcWrite(spcChannel, 0);
+  ledcWrite(mpcChannel, 0);
   digitalWrite(y4Pin, LOW);
   digitalWrite(tccPin, 0);
 
@@ -385,15 +403,15 @@ void select_four()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 4 -");
 
-  //analogWrite(mpcPin, 140);
-  //analogWrite(spcPin, 140);
+  ledcWrite(mpcChannel, 140);
+  ledcWrite(spcChannel, 140);
   digitalWrite(y3Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(mpcPin, 0);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 0);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
@@ -408,15 +426,15 @@ void select_five()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 5 +");
 
-  //analogWrite(mpcPin, 100);
-  //analogWrite(spcPin, 120);
+  ledcWrite(mpcChannel, 100);
+  ledcWrite(spcChannel, 120);
   digitalWrite(y3Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(mpcPin, 15);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 15);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, LOW);
 
@@ -433,8 +451,8 @@ void select_fivetcc()
 
   delay(400);
 
-  //analogWrite(mpcPin, 25);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 25);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
 
@@ -451,8 +469,8 @@ void select_fivedown()
 
   delay(400);
 
-  //analogWrite(mpcPin, 15);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 15);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
@@ -467,15 +485,15 @@ void select_twoup()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 2 +");
 
-  //analogWrite(mpcPin, 80);
-  //analogWrite(spcPin, 90);
+  ledcWrite(mpcChannel, 80);
+  ledcWrite(spcChannel, 90);
   digitalWrite(y3Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(mpcPin, 0);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 0);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
@@ -490,15 +508,15 @@ void select_threeup()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 3 +");
 
-  //analogWrite(mpcPin, 80);
-  //analogWrite(spcPin, 80);
+  ledcWrite(mpcChannel, 80);
+  ledcWrite(spcChannel, 80);
   digitalWrite(y5Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(600);
 
-  //analogWrite(mpcPin, 0);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 0);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y5Pin, LOW);
   digitalWrite(tccPin, 0);
 
@@ -513,15 +531,15 @@ void select_fourup()
   displayOnScreen(" SHIFT");
   Serial.println("Gear 4 +");
 
-  //analogWrite(mpcPin, 90);
-  //analogWrite(spcPin, 100);
+  ledcWrite(mpcChannel, 90);
+  ledcWrite(spcChannel, 100);
   digitalWrite(y4Pin, HIGH);
   digitalWrite(tccPin, 0);
 
   delay(1200);
 
-  //analogWrite(mpcPin, 0);
-  //analogWrite(spcPin, 0);
+  ledcWrite(mpcChannel, 0);
+  ledcWrite(spcChannel, 0);
   digitalWrite(y4Pin, LOW);
   digitalWrite(tccPin, 0);
 
