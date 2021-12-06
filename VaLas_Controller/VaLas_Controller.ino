@@ -73,10 +73,12 @@ int tccPin = 43;            // Turbine lockup     TCC        min-max 0-255
 int atfTempPin = 40;        // ATF temp / P-N switch 
 
 int pwmFreq = 1000;
-int mpcChannel = 0;
-int spcChannel = 1;
-int tccChannel = 2;
-int y4Channel = 3;
+int mpcChannel = 0; // Channel 0
+int spcChannel = 1; // Channel 1
+int tccChannel = 2; // Channel 2
+int y4Channel = 3; // Channel 3
+
+const char* stringToDisplayBuffer;
 
 GearLeverPosition currentLeverPosition;
 ShiftRequest currentShiftRequest;
@@ -112,10 +114,10 @@ void setup()
   ledcAttachPin(y4Pin, y4Channel);
 
   // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
-  ledcSetup(0, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
-  ledcSetup(1, pwmFreq, 8);
-  ledcSetup(2, pwmFreq, 8);
-  ledcSetup(3, pwmFreq, 8);
+  ledcSetup(mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
+  ledcSetup(spcChannel, pwmFreq, 8);
+  ledcSetup(tccChannel, pwmFreq, 8);
+  ledcSetup(y4Channel, pwmFreq, 8);
 
   currentLeverPosition = Unknown;
   currentShiftRequest = NoShift;
@@ -131,8 +133,9 @@ void loop()
   {
     readGearLeverPosition();
     readSwitch();
+    displayOnScreen("");
   }
-  // While stopped, a switch as been pressed when in Drive
+  // While stopped, a switch as been pressed while in Drive
 
   // Check for the up_shift
   if (currentLeverPosition == Drive && currentShiftRequest == UpShift)
@@ -242,7 +245,7 @@ void readGearLeverPosition()
   case 300 ... 600:
     processLeverValue(Park);
     break;
-  case 1600 ... 2000:
+  case 1400 ... 2000:
     processLeverValue(Reverse);
     break;
   case 2100 ... 2500:
@@ -311,14 +314,6 @@ void resetToGear2()
   
   gear = 2;
 }
-
-// GEAR SETTINGS
-// PIN  1-2,4-5 SWITCH  ON/OFF
-// PIN2 2-3     SWITCH  ON/OFF
-// PIN3 3-4     SWITCH  ON/OFF
-// PIN4 LINE PRESSURE   PWM 0-255
-// PIN5 SWITCH PRESSURE PWM 0-255
-// PIN6 TURBINE LOCK    PWM 0-255
 
 void select_one()
 // 2 -> 1
@@ -550,10 +545,30 @@ void select_fourup()
 
 void displayOnScreen(const char* stringToDisplay)
 {
+  if (strlen(stringToDisplay) > 0)
+  {
+    stringToDisplayBuffer = stringToDisplay;
+  }
+
   u8g2.clearBuffer();
+
+  // Draw gear      
   u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplay);
+  u8g2.drawStr(1, 29, stringToDisplayBuffer);
+
+  // Draw ATF temp
+  String atfTemp;
+  if (currentLeverPosition == Park || currentLeverPosition == Neutral)
+    atfTemp = String("-");
+  else
+    atfTemp = String(readAtfTemp());
+
+  String tempVar = "ATF: " + atfTemp;// + String(" C");
+  u8g2.setFont(u8g2_font_logisoso18_tr);
+  u8g2.drawStr(10, 65, tempVar.c_str());
   u8g2.sendBuffer();
+
+  delay(150);
 }
 
 inline const String ToString(GearLeverPosition v)
@@ -578,6 +593,9 @@ void toggleHighIdle()
 // Reading oil temp sensor / P-N switch (same input pin, see page 27: http://www.all-trans.by/assets/site/files/mercedes/722.6.1.pdf)
 int readAtfTemp()
 {
+  // Test
+  return 120;
+
   uint8_t len = 14;
   int16_t atfMap[len][3] = {
       {2500, 846, 130},
