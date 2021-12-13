@@ -129,7 +129,7 @@ void loop()
   readGearLeverPosition();
   readSwitch();
 
-  while (currentLeverPosition != Drive && currentShiftRequest != NoShift)
+  while (currentLeverPosition != Drive && currentLeverPosition != Reverse && currentShiftRequest != NoShift)
   {
     readGearLeverPosition();
     readSwitch();
@@ -208,6 +208,48 @@ void loop()
       }
     }
   }
+
+  else if (currentLeverPosition == Reverse)
+  {
+    if (currentShiftRequest == UpShift)
+    {
+      if ((gear >= 1) && (gear <= 2))
+      {
+        gear++;
+        delay(100);
+
+        switch (gear)
+        {
+        case 2:
+          select_reverse_two();
+          break;
+        default:
+          gear = 2;
+          currentShiftRequest = NoShift;
+          return;
+        }
+      }
+    }
+    else if (currentShiftRequest == DownShift)
+    {
+      if ((gear >= 1) && (gear <= 2))
+      {
+        gear--;
+        delay(100);
+
+        switch (gear)
+        {
+        case 1:
+          select_reverse_one();
+          break;
+        default:
+          gear = 1;
+          currentShiftRequest = NoShift;
+          return;
+        }
+      }
+    }
+  }
 }
 
 void readSwitch()
@@ -273,14 +315,14 @@ void processLeverValue(GearLeverPosition position)
 
   // Log and display
   String printVar = ToString(position) + " selected";
-  String screenVar = " - " + printVar.substring(0,1) + " -"; // Take first character. Example Park would print: - P -
+  String screenVar = "" + printVar.substring(0,1) + " "; // Take first character. Example Park would print: - P -
   Serial.println(printVar);
   displayOnScreen(screenVar.c_str());
 
   if (position == Drive)
   {
     delay(500);
-    displayOnScreen("  D: 2");
+    displayOnScreen("D2");
   }
 }
 
@@ -312,7 +354,9 @@ void resetToGear2()
     ledcWrite(spcChannel, 0); // Set to 0 in D and R
   }
   
-  gear = 2;
+  // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
+  if (currentLeverPosition == Reverse || currentLeverPosition == Park)
+    gear = 2;
 }
 
 void select_one()
@@ -332,7 +376,7 @@ void select_one()
   ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
 
-  displayOnScreen("  D: 1");
+  displayOnScreen("D1");
 
   currentShiftRequest = NoShift;
 }
@@ -362,7 +406,7 @@ void select_two()
   ledcWrite(mpcChannel, 20);
   ledcWrite(spcChannel, 0);
 
-  displayOnScreen("  D: 2");
+  displayOnScreen("D2");
 
   currentShiftRequest = NoShift;
 }
@@ -387,7 +431,7 @@ void select_three()
 
   delay(50);
 
-  displayOnScreen("  D: 3");
+  displayOnScreen("D3");
 
   currentShiftRequest = NoShift;
 }
@@ -410,7 +454,7 @@ void select_four()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("  D: 4");
+  displayOnScreen("D4");
 
   currentShiftRequest = NoShift;
 }
@@ -433,7 +477,7 @@ void select_five()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, LOW);
 
-  displayOnScreen("  D: 5");
+  displayOnScreen("D5");
 
   currentShiftRequest = NoShift;
 }
@@ -451,7 +495,7 @@ void select_fivetcc()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
 
-  displayOnScreen("  D: 5+");
+  displayOnScreen("D5+ ");
 
   currentShiftRequest = NoShift;
 }
@@ -469,7 +513,7 @@ void select_fivedown()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("  D: 5");
+  displayOnScreen("D5");
 
   currentShiftRequest = NoShift;
 }
@@ -492,7 +536,7 @@ void select_twoup()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("  D: 2");
+  displayOnScreen("D2");
 
   currentShiftRequest = NoShift;
 }
@@ -515,7 +559,7 @@ void select_threeup()
   digitalWrite(y5Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("  D: 3");
+  displayOnScreen("D3");
 
   currentShiftRequest = NoShift;
 }
@@ -538,9 +582,29 @@ void select_fourup()
   digitalWrite(y4Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("  D: 4");
+  displayOnScreen("D4");
 
   currentShiftRequest = NoShift;
+}
+
+void select_reverse_one()
+{ // R2 > R1
+  displayOnScreen(" SHIFT");
+  Serial.println("R 1");
+
+  // TODO: actual shifting
+
+  displayOnScreen("R1");
+}
+
+void select_reverse_two()
+{ // R1 > R2
+  displayOnScreen(" SHIFT");
+  Serial.println("R 2 +");
+
+  // TODO: actual shifting
+  
+  displayOnScreen("R2");
 }
 
 void displayOnScreen(const char* stringToDisplay)
