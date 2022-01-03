@@ -78,6 +78,14 @@ int spcChannel = 1; // Channel 1
 int tccChannel = 2; // Channel 2
 int y4Channel = 3; // Channel 3
 
+int elrPwmFreq = 100;
+int elrChannel = 20;
+int elrTogglePin = 100;
+int elrPwmPin = 101;
+int elrToggleState = 0;
+int old_elrToggleState = 0;
+bool elrEnabled = false;
+
 const char* stringToDisplayBuffer;
 
 GearLeverPosition currentLeverPosition;
@@ -119,6 +127,12 @@ void setup()
   ledcSetup(tccChannel, pwmFreq, 8);
   ledcSetup(y4Channel, pwmFreq, 8);
 
+  // Set all the ELR inputs and outputs
+  pinMode(elrTogglePin, INPUT_PULLUP);
+  pinMode(elrPwmPin, OUTPUT);
+  ledcAttachPin(elrPwmPin, elrChannel);
+  ledcSetup(elrChannel, elrPwmFreq, 8);
+
   currentLeverPosition = Unknown;
   currentShiftRequest = NoShift;
   gear = 2;
@@ -129,7 +143,7 @@ void loop()
   readGearLeverPosition();
   readSwitch();
 
-  while (currentLeverPosition != Drive && currentLeverPosition != Reverse && currentShiftRequest != NoShift)
+  while (currentLeverPosition != Drive && currentShiftRequest != NoShift)
   {
     readGearLeverPosition();
     readSwitch();
@@ -205,48 +219,6 @@ void loop()
         gear = 1;
         currentShiftRequest = NoShift;
         return;
-      }
-    }
-  }
-
-  else if (currentLeverPosition == Reverse)
-  {
-    if (currentShiftRequest == UpShift)
-    {
-      if ((gear >= 1) && (gear <= 2))
-      {
-        gear++;
-        delay(100);
-
-        switch (gear)
-        {
-        case 2:
-          select_reverse_two();
-          break;
-        default:
-          gear = 2;
-          currentShiftRequest = NoShift;
-          return;
-        }
-      }
-    }
-    else if (currentShiftRequest == DownShift)
-    {
-      if ((gear >= 1) && (gear <= 2))
-      {
-        gear--;
-        delay(100);
-
-        switch (gear)
-        {
-        case 1:
-          select_reverse_one();
-          break;
-        default:
-          gear = 1;
-          currentShiftRequest = NoShift;
-          return;
-        }
       }
     }
   }
@@ -587,26 +559,6 @@ void select_fourup()
   currentShiftRequest = NoShift;
 }
 
-void select_reverse_one()
-{ // R2 > R1
-  displayOnScreen(" SHIFT");
-  Serial.println("R 1");
-
-  // TODO: actual shifting
-
-  displayOnScreen("R1");
-}
-
-void select_reverse_two()
-{ // R1 > R2
-  displayOnScreen(" SHIFT");
-  Serial.println("R 2 +");
-
-  // TODO: actual shifting
-  
-  displayOnScreen("R2");
-}
-
 void displayOnScreen(const char* stringToDisplay)
 {
   if (strlen(stringToDisplay) > 0)
@@ -649,9 +601,19 @@ inline const String ToString(GearLeverPosition v)
 
 /// Optional stuff
 
-void toggleHighIdle()
+void toggleElrHighIdle()
 {
   // Set pwm signal to mechanical pump ELR pins
+
+  elrToggleState = digitalRead(upShiftPin);
+  if ((elrToggleState == 0) && (old_elrToggleState == 1))
+  {
+    Serial.println("Toggle high idle via PWM");
+    elrEnabled = !elrEnabled;
+    int pwmVal = elrEnabled ? 125 : 0;
+    ledcWrite(elrChannel, pwmVal);
+  }
+  old_elrToggleState = elrToggleState;
 }
 
 // Reading oil temp sensor / P-N switch (same input pin, see page 27: http://www.all-trans.by/assets/site/files/mercedes/722.6.1.pdf)
