@@ -11,14 +11,6 @@
 //LICENCE: CC BY-NC 3.0 https://creativecommons.org/licenses/by-nc/3.0/deed.en
 //NOT FOR COMMERCIAL USE!
 
-// GEAR SETTINGS
-// PIN  1-2,4-5 SWITCH  ON/OFF
-// PIN2 2-3     SWITCH  ON/OFF
-// PIN3 3-4     SWITCH  ON/OFF
-// PIN4 LINE PRESSURE   PWM 0-255 low=0
-// PIN5 SWITCH PRESSURE PWM 0-255 low=0
-// PIN6 TURBINE LOCK    PWM 0-255 low=0
-
 // GEARLEVER SETTINGS
 // 3.3V Pin on ESP32 + sensor pin 4
 // Reads ranges:
@@ -31,6 +23,8 @@
 #include <U8g2lib.h>
 #include <SPI.h>
 #include <Wire.h>
+#include "VaLas_Controller.h"
+#include "Sensors.h"
 
 // 128x64 for 0.96" OLED
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
@@ -60,36 +54,17 @@ int down_shift = 0;
 int old_upshift = 0;
 int old_downshift = 0;
 
-int upShiftPin = 19;
-int downShiftPin = 18;
-int gearLeverPotPin = 4;    // Read potentiometer value to determine if in P, R, N, D
-
-int y3Pin = 33;             // 1-2, 4-5 switch    shift      LOW/HIGH
-int y4Pin = 35;             // 3-4 switch         shift      LOW/HIGH
-int y5Pin = 37;             // 2-3 switch         shift      LOW/HIGH
-int mpcPin = 39;            // Line pressure      MOD_PC     min-max 255-0
-int spcPin = 41;            // Shift pressure     SHIFT_PC   min-max 255-0
-int tccPin = 43;            // Turbine lockup     TCC        min-max 0-255
-int atfTempPin = 40;        // ATF temp / P-N switch 
-
 int pwmFreq = 1000;
 int mpcChannel = 0; // Channel 0
 int spcChannel = 1; // Channel 1
 int tccChannel = 2; // Channel 2
 int y4Channel = 3; // Channel 3
 
-int elrPwmFreq = 100;
-int elrChannel = 20;
-int elrTogglePin = 100;
-int elrPwmPin = 101;
-int elrToggleState = 0;
-int old_elrToggleState = 0;
-bool elrEnabled = false;
-
 const char* stringToDisplayBuffer;
 
 GearLeverPosition currentLeverPosition;
 ShiftRequest currentShiftRequest;
+Sensors sensors;
 
 void setup()
 {
@@ -577,7 +552,7 @@ void displayOnScreen(const char* stringToDisplay)
   if (currentLeverPosition == Park || currentLeverPosition == Neutral)
     atfTemp = String("-");
   else
-    atfTemp = String(readAtfTemp());
+    atfTemp = String(sensors.ReadAtfTemp());
 
   String tempVar = "ATF: " + atfTemp;// + String(" C");
   u8g2.setFont(u8g2_font_logisoso18_tr);
@@ -597,115 +572,4 @@ inline const String ToString(GearLeverPosition v)
     case Drive:   return "Drive";
     default:      return "Unknown";
   }
-}
-
-/// Optional stuff
-
-void toggleElrHighIdle()
-{
-  // Set pwm signal to mechanical pump ELR pins
-
-  elrToggleState = digitalRead(upShiftPin);
-  if ((elrToggleState == 0) && (old_elrToggleState == 1))
-  {
-    Serial.println("Toggle high idle via PWM");
-    elrEnabled = !elrEnabled;
-    int pwmVal = elrEnabled ? 125 : 0;
-    ledcWrite(elrChannel, pwmVal);
-  }
-  old_elrToggleState = elrToggleState;
-}
-
-// Reading oil temp sensor / P-N switch (same input pin, see page 27: http://www.all-trans.by/assets/site/files/mercedes/722.6.1.pdf)
-int readAtfTemp()
-{
-  // Test
-  return 120;
-
-  uint8_t len = 14;
-  int16_t atfMap[len][3] = {
-      {2500, 846, 130},
-      {2500, 843, 120},
-      {2500, 840, 110},
-      {2250, 835, 100},
-      {2000, 830, 90},
-      {2000, 825, 80},
-      {1750, 819, 70},
-      {1500, 811, 60},
-      {1500, 800, 47},
-      {1250, 798, 44},
-      {1250, 783, 34},
-      {1000, 778, 23},
-      {750, 723, -10},
-      {500, 652, -40},
-  };
-  byte idx = 0;
-  static uint32_t m = millis() + 900;
-  uint16_t adc = analogRead(atfTempPin);
-  for (byte i = 0; i < len; i++)
-  {
-    if (adc >= atfMap[i][1])
-    {
-      idx = i;
-      break;
-    }
-  }
-  if (idx == 0)
-  {
-    return atfMap[0][2];
-  }
-  else if (idx > 0 && idx < len)
-  {
-    int16_t tempAbove = atfMap[idx - 1][2];
-    int16_t temp = atfMap[idx][2];
-    int16_t adcAbove = atfMap[idx - 1][1];
-    int16_t curAdc = atfMap[idx][1];
-    uint16_t res = map(adc, curAdc, adcAbove, temp, tempAbove);
-    return res;
-  }
-  else
-  {
-    return atfMap[len - 1][2];
-  }
-}
-
-int readRpm()
-{  
-  // Read stock OM606 rpm sensor here
-  // Calculation: frequency / 144 (flywheel tooth) * 60 = RPM.
-
-  // if (rpmSpeed)
-  //   {
-  //     // speed based on engine rpm
-  //     vehicleSpeedRPM = tireCircumference * curRPM / (ratioFromGear(gear) * config.diffRatio) / 1000000 * 60;
-  //     speedValue = vehicleSpeedRPM;
-  //   } 
-}
-
-int readN2()
-{
-  // if (n2SpeedPulses >= n2PulsesPerRev)
-  // {
-  //   n2Speed = n2SpeedPulses / n2PulsesPerRev / elapsedTime * 1000 * 60; // there are 60 pulses in one rev and 60 seconds in minute, so this is quite simple
-  //   n2SpeedPulses = 0;
-  // }
-  // else
-  // {
-  //   n2SpeedPulses = 0;
-  //   n2Speed = 0;
-  // }
-}
-
-int readN3()
-{
-  // if (n3SpeedPulses >= n3PulsesPerRev)
-  // {
-  //   n3Speed = n3SpeedPulses / n3PulsesPerRev / elapsedTime * 1000 * 60;
-  //   n3SpeedPulses = 0;
-  // }
-  // else
-  // {
-  //   n3SpeedPulses = 0;
-  //   n3Speed = 0;
-  // }
 }
