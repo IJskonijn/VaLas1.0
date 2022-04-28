@@ -11,48 +11,18 @@
 //LICENCE: CC BY-NC 3.0 https://creativecommons.org/licenses/by-nc/3.0/deed.en
 //NOT FOR COMMERCIAL USE!
 
-// GEARLEVER SETTINGS
-// 3.3V Pin on ESP32 + sensor pin 4
-// Reads ranges:
-// P   300-600
-// R   1600-2000
-// N   2100-2500
-// D   3000-3400
-
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <SPI.h>
 #include <Wire.h>
 #include "VaLas_Controller.h"
 #include "Sensors.h"
+#include "Gearlever.h"
 
 // 128x64 for 0.96" OLED
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
-typedef enum GearLeverPosition
-{
-  Park,
-  Reverse,
-  Neutral,
-  Drive,
-  Unknown
-};
-
-typedef enum ShiftRequest
-{
-  NoShift,
-  UpShift,
-  DownShift
-};
-
-const int n2PulsesPerRev = 60;
-const int n3PulsesPerRev = 60;
-
 byte gear;
-int up_shift = 0;
-int down_shift = 0;
-int old_upshift = 0;
-int old_downshift = 0;
 
 int pwmFreq = 1000;
 int mpcChannel = 0; // Channel 0
@@ -62,8 +32,10 @@ int y4Channel = 3; // Channel 3
 
 const char* stringToDisplayBuffer;
 
-GearLeverPosition currentLeverPosition;
-ShiftRequest currentShiftRequest;
+VaLas_Controller::GearLeverPosition oldLeverPosition;
+VaLas_Controller::GearLeverPosition currentLeverPosition;
+VaLas_Controller::ShiftRequest currentShiftRequest;
+Gearlever gearlever;
 Sensors sensors;
 
 void setup()
@@ -108,26 +80,24 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
 
-  currentLeverPosition = Unknown;
-  currentShiftRequest = NoShift;
+  currentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
   gear = 2;
 }
 
 void loop()
 {
-  readGearLeverPosition();
-  readSwitch();
+  processLeverValues();
 
-  while (currentLeverPosition != Drive && currentShiftRequest != NoShift)
+  while (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
   {
-    readGearLeverPosition();
-    readSwitch();
+    processLeverValues();
     displayOnScreen("");
   }
   // While stopped, a switch as been pressed while in Drive
 
   // Check for the up_shift
-  if (currentLeverPosition == Drive && currentShiftRequest == UpShift)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     if ((gear >= 1) && (gear <= 6))
     {
@@ -136,34 +106,34 @@ void loop()
 
       switch (gear)
       {
-      case 1:
-        select_one();
-        break;
+      // case 1: // Shouldn't be able to come here
+      //   select_one_down();
+      //   break;
       case 2:
-        select_twoup();
+        select_two_up();
         break;
       case 3:
-        select_threeup();
+        select_three_up();
         break;
       case 4:
-        select_fourup();
+        select_four_up();
         break;
       case 5:
-        select_five();
+        select_five_up();
         break;
       case 6:
-        select_fivetcc();
+        select_fivetcc_up();
         break;
       default:
         gear = 6;
-        currentShiftRequest = NoShift;
+        currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
         return;
       }
     }
   }
 
   // check for the down_shift
-  else if (currentLeverPosition == Drive && currentShiftRequest == DownShift)
+  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
     if ((gear >= 1) && (gear <= 6))
     {
@@ -173,100 +143,51 @@ void loop()
       switch (gear)
       {
       case 1:
-        select_one();
+        select_one_down();
         break;
       case 2:
-        select_two();
+        select_two_down();
         break;
       case 3:
-        select_three();
+        select_three_down();
         break;
       case 4:
-        select_four();
+        select_four_down();
         break;
       case 5:
-        select_fivedown();
+        select_five_down();
         break;
-      case 6:
-        select_fivetcc();
-        break;
+      // case 6: // Shouldn't be able to come here
+      //   select_fivetcc_up();
+      //   break;
       default:
         gear = 1;
-        currentShiftRequest = NoShift;
+        currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
         return;
       }
     }
   }
 }
 
-void readSwitch()
+void processLeverValues()
 {
-  // Do nothing if not in Drive
-  if (currentLeverPosition != Drive)
+  oldLeverPosition = currentLeverPosition;
+  gearlever.ReadGearLeverPosition(currentLeverPosition);
+  gearlever.ReadShiftRequest(currentShiftRequest, currentLeverPosition);
+
+  if (currentLeverPosition == oldLeverPosition)
     return;
 
-  // check upshift transition
-  up_shift = digitalRead(upShiftPin);
-  if ((up_shift == 0) && (old_upshift == 1))
-  {
-    currentShiftRequest = UpShift;
-    delay(50);
-    Serial.println("Upshift pressed");
-  }
-  old_upshift = up_shift;
-
-  // check downshift transition
-  down_shift = digitalRead(downShiftPin);
-  if ((down_shift == 0) && (old_downshift == 1))
-  {
-    currentShiftRequest = DownShift;
-    delay(50);
-    Serial.println("Downshift pressed");
-  }
-  old_downshift = down_shift;
-}
-
-void readGearLeverPosition()
-{
-  int leverValue = analogRead(gearLeverPotPin);
-  switch (leverValue)
-  {
-  case 300 ... 600:
-    processLeverValue(Park);
-    break;
-  case 1400 ... 2000:
-    processLeverValue(Reverse);
-    break;
-  case 2100 ... 2500:
-    processLeverValue(Neutral);
-    break;
-  case 3000 ... 3400:
-    processLeverValue(Drive);
-    break;
-  
-  default: // I guess something went wrong...
-    break;
-  }
-
-  delay(50);
-}
-
-void processLeverValue(GearLeverPosition position)
-{
-  if (currentLeverPosition == position)
-    return;
-
-  // Set new value and start fresh from gear 2
-  currentLeverPosition = position;
+  // Start fresh from gear 2 if needed
   resetToGear2();
 
   // Log and display
-  String printVar = ToString(position) + " selected";
+  String printVar = ToString(currentLeverPosition) + " selected";
   String screenVar = "" + printVar.substring(0,1) + " "; // Take first character. Example Park would print: - P -
   Serial.println(printVar);
   displayOnScreen(screenVar.c_str());
 
-  if (position == Drive)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive)
   {
     delay(500);
     displayOnScreen("D2");
@@ -276,21 +197,18 @@ void processLeverValue(GearLeverPosition position)
 void resetToGear2()
 {
   // Reset all shifting vars
-  up_shift = 1;
-  down_shift = 1;
-  old_upshift = 0;
-  old_downshift = 0;
-  currentShiftRequest = NoShift;
+  gearlever.Reset();
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
-  if (currentLeverPosition == Park || currentLeverPosition == Neutral)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
   {
     ledcWrite(mpcChannel, (255/100*40)); //40%
     ledcWrite(spcChannel, (255/100*33)); //33%
     ledcWrite(y4Channel, (255/100*30)); //30%, Back to idle
 
     // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
-    if (currentLeverPosition == Park)
+    if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
       ledcWrite(y4Channel, 255);
     else
       ledcWrite(y4Channel, 0);
@@ -302,11 +220,13 @@ void resetToGear2()
   }
   
   // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
-  if (currentLeverPosition == Reverse || currentLeverPosition == Park)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
     gear = 2;
 }
 
-void select_one()
+#pragma region Downshifts
+
+void select_one_down()
 // 2 -> 1
 {
   displayOnScreen(" SHIFT");
@@ -325,10 +245,10 @@ void select_one()
 
   displayOnScreen("D1");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_two()
+void select_two_down()
 // 3 -> 2
 {
   displayOnScreen(" SHIFT");
@@ -355,10 +275,10 @@ void select_two()
 
   displayOnScreen("D2");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_three()
+void select_three_down()
 // 4 -> 3
 {
   displayOnScreen(" SHIFT");
@@ -380,10 +300,10 @@ void select_three()
 
   displayOnScreen("D3");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_four()
+void select_four_down()
 // 5 -> 4
 {
   displayOnScreen(" SHIFT");
@@ -403,51 +323,10 @@ void select_four()
 
   displayOnScreen("D4");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_five()
-// 4 -> 5
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 5 +");
-
-  ledcWrite(mpcChannel, 100);
-  ledcWrite(spcChannel, 120);
-  digitalWrite(y3Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 15);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, LOW);
-
-  displayOnScreen("D5");
-
-  currentShiftRequest = NoShift;
-}
-
-void select_fivetcc()
-// 5 -> 5 OD
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 5tcc +");
-
-  delay(400);
-
-  ledcWrite(mpcChannel, 25);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, HIGH);
-
-  displayOnScreen("D5+ ");
-
-  currentShiftRequest = NoShift;
-}
-
-void select_fivedown()
+void select_five_down()
 // 5 OD -> 5
 {
   displayOnScreen(" SHIFT");
@@ -462,10 +341,14 @@ void select_fivedown()
 
   displayOnScreen("D5");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_twoup()
+#pragma endregion Downshifts
+
+#pragma region Upshifts
+
+void select_two_up()
 // 1 -> 2
 {
   displayOnScreen(" SHIFT");
@@ -485,10 +368,10 @@ void select_twoup()
 
   displayOnScreen("D2");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_threeup()
+void select_three_up()
 // 2 -> 3
 {
   displayOnScreen(" SHIFT");
@@ -508,10 +391,10 @@ void select_threeup()
 
   displayOnScreen("D3");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_fourup()
+void select_four_up()
 // 3 -> 4
 {
   displayOnScreen(" SHIFT");
@@ -531,8 +414,51 @@ void select_fourup()
 
   displayOnScreen("D4");
 
-  currentShiftRequest = NoShift;
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
+
+void select_five_up()
+// 4 -> 5
+{
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 5 +");
+
+  ledcWrite(mpcChannel, 100);
+  ledcWrite(spcChannel, 120);
+  digitalWrite(y3Pin, HIGH);
+  digitalWrite(tccPin, 0);
+
+  delay(600);
+
+  ledcWrite(mpcChannel, 15);
+  ledcWrite(spcChannel, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, LOW);
+
+  displayOnScreen("D5");
+
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+}
+
+void select_fivetcc_up()
+// 5 -> 5 OD
+{
+  displayOnScreen(" SHIFT");
+  Serial.println("Gear 5tcc +");
+
+  delay(400);
+
+  ledcWrite(mpcChannel, 25);
+  ledcWrite(spcChannel, 0);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(tccPin, HIGH);
+
+  displayOnScreen("D5+ ");
+
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+}
+
+#pragma endregion Upshifts
 
 void displayOnScreen(const char* stringToDisplay)
 {
@@ -549,7 +475,7 @@ void displayOnScreen(const char* stringToDisplay)
 
   // Draw ATF temp
   String atfTemp;
-  if (currentLeverPosition == Park || currentLeverPosition == Neutral)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
     atfTemp = String("-");
   else
     atfTemp = String(sensors.ReadAtfTemp());
@@ -562,14 +488,14 @@ void displayOnScreen(const char* stringToDisplay)
   delay(150);
 }
 
-inline const String ToString(GearLeverPosition v)
+inline const String ToString( VaLas_Controller::GearLeverPosition v)
 {
   switch (v)
   {
-    case Park:    return "Park";
-    case Reverse: return "Reverse";
-    case Neutral: return "Neutral";
-    case Drive:   return "Drive";
+    case  VaLas_Controller::GearLeverPosition::Park:    return "Park";
+    case  VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
+    case  VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
+    case  VaLas_Controller::GearLeverPosition::Drive:   return "Drive";
     default:      return "Unknown";
   }
 }

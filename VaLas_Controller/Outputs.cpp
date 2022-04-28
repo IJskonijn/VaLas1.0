@@ -12,7 +12,7 @@ Outputs::Outputs()
 
 /// Optional stuff for now
 
-void toggleElrHighIdle()
+void Outputs::ToggleElrHighIdle()
 {
   // Set pwm signal to mechanical pump ELR pins
 

@@ -2,6 +2,9 @@
 #include "Sensors.h"
 #include "VaLas_Controller.h"
 
+const int n2PulsesPerRev = 60;
+const int n3PulsesPerRev = 60;
+
 Sensors::Sensors()
 {
 }

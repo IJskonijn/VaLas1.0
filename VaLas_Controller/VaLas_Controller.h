@@ -1,5 +1,5 @@
-#ifndef AUTODAIRY_H
-#define AUTODAIRY_H
+#ifndef VALAS_CONTROLLER_H
+#define VALAS_CONTROLLER_H
 
 
 // GEAR SETTINGS
@@ -27,5 +27,26 @@
 #define elrPwmFreq 100
 #define elrChannel 20
 
+class VaLas_Controller {
+    
+	public:
+    enum class GearLeverPosition
+    {
+      Park,
+      Reverse,
+      Neutral,
+      Drive,
+      Unknown
+    };
+
+    enum class ShiftRequest
+    {
+      NoShift,
+      UpShift,
+      DownShift
+    };
+		
+	private:
+};
 
 #endif

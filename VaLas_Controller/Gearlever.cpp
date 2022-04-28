@@ -1,0 +1,84 @@
+
+// GEARLEVER SETTINGS
+// 3.3V Pin on ESP32 + sensor pin 4
+// Reads ranges:
+// P   300-600
+// R   1600-2000
+// N   2100-2500
+// D   3000-3400
+
+#include <Arduino.h>
+#include "Gearlever.h"
+#include "VaLas_Controller.h"
+
+int up_shift = 0;
+int down_shift = 0;
+int old_upshift = 0;
+int old_downshift = 0;
+
+Gearlever::Gearlever()
+{}
+
+void Gearlever::ReadGearLeverPosition(VaLas_Controller::GearLeverPosition& currentLeverPosition)
+{
+  int leverValue = analogRead(gearLeverPotPin);
+  switch (leverValue)
+  {
+  case 300 ... 600:
+    currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
+    break;
+  case 1400 ... 2000:
+    currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
+    break;
+  case 2100 ... 2500:
+    currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
+    break;
+  case 3000 ... 3400:
+    currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+    break;
+  
+  default: // I guess something went wrong...
+    break;
+  }
+
+  delay(50);
+}
+
+void Gearlever::ReadShiftRequest(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
+{
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+
+  // Do nothing if not in Drive
+  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive)
+    return;
+
+
+  // check ShiftRequest::UpShift transition
+  up_shift = digitalRead(upShiftPin);
+  if ((up_shift == 0) && (old_upshift == 1))
+  {
+    currentShiftRequest = VaLas_Controller::ShiftRequest::UpShift;
+    delay(50);
+    Serial.println("Upshift pressed");
+  }
+  old_upshift = up_shift;
+
+  // check ShiftRequest::DownShift transition
+  down_shift = digitalRead(downShiftPin);
+  if ((down_shift == 0) && (old_downshift == 1))
+  {
+    currentShiftRequest = VaLas_Controller::ShiftRequest::DownShift;
+    delay(50);
+    Serial.println("Downshift pressed");
+  }
+  old_downshift = down_shift;
+}
+
+void Gearlever::Reset()
+{
+  // Reset all shifting vars
+  up_shift = 1;
+  down_shift = 1;
+  old_upshift = 0;
+  old_downshift = 0;
+}
