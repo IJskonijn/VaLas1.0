@@ -24,7 +24,7 @@
 // 128x64 for 0.96" OLED
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
-byte gear;
+int gear;
 
 int pwmFreq = 1000;
 int mpcChannel = 0; // Channel 0
@@ -186,14 +186,15 @@ void processLeverValues()
 
   // Log and display
   String printVar = ToString(currentLeverPosition) + " selected";
-  String screenVar = "" + printVar.substring(0,1) + " "; // Take first character. Example Park would print: - P -
+  String screenVar = "" + printVar.substring(0,1); // Take first character. Example Park would print: - P -
   Serial.println(printVar);
   displayOnScreen(screenVar.c_str());
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive)
   {
     delay(500);
-    displayOnScreen("D2");
+    String screenVarD = "" + screenVar + gear;
+    displayOnScreen(screenVarD.c_str());
   }
 }
 
