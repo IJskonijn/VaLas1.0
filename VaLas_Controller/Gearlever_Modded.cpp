@@ -8,7 +8,7 @@
 // D   3000-3400
 
 #include <Arduino.h>
-#include "Gearlever.h"
+#include "Gearlever_Modded.h"
 #include "VaLas_Controller.h"
 
 int up_shift = 0;
@@ -16,10 +16,25 @@ int down_shift = 0;
 int old_upshift = 0;
 int old_downshift = 0;
 
-Gearlever::Gearlever()
+Gearlever_Modded::Gearlever_Modded()
 {}
 
-void Gearlever::ReadGearLeverPosition(VaLas_Controller::GearLeverPosition& currentLeverPosition)
+void Gearlever_Modded::ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
+{
+  readGearLeverPosition(currentLeverPosition);
+  readShiftRequest(currentShiftRequest, currentLeverPosition);
+}
+
+void Gearlever_Modded::Reset()
+{
+  // Reset all shifting vars
+  up_shift = 1;
+  down_shift = 1;
+  old_upshift = 0;
+  old_downshift = 0;
+}
+
+void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition& currentLeverPosition)
 {
   int leverValue = analogRead(gearLeverPotPin);
   switch (leverValue)
@@ -44,7 +59,7 @@ void Gearlever::ReadGearLeverPosition(VaLas_Controller::GearLeverPosition& curre
   delay(50);
 }
 
-void Gearlever::ReadShiftRequest(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
+void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
 {
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
@@ -72,13 +87,4 @@ void Gearlever::ReadShiftRequest(VaLas_Controller::ShiftRequest& currentShiftReq
     Serial.println("Downshift pressed");
   }
   old_downshift = down_shift;
-}
-
-void Gearlever::Reset()
-{
-  // Reset all shifting vars
-  up_shift = 1;
-  down_shift = 1;
-  old_upshift = 0;
-  old_downshift = 0;
 }

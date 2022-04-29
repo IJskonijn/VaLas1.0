@@ -18,6 +18,8 @@
 #include "VaLas_Controller.h"
 #include "Sensors.h"
 #include "Gearlever.h"
+#include "Gearlever_CAN.h"
+#include "Gearlever_Modded.h"
 
 // 128x64 for 0.96" OLED
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
@@ -35,7 +37,7 @@ const char* stringToDisplayBuffer;
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
 VaLas_Controller::ShiftRequest currentShiftRequest;
-Gearlever gearlever;
+Gearlever* gearlever;
 Sensors sensors;
 
 void setup()
@@ -79,6 +81,8 @@ void setup()
   pinMode(elrPwmPin, OUTPUT);
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
+
+  gearlever = new Gearlever_Modded();
 
   currentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
@@ -172,8 +176,7 @@ void loop()
 void processLeverValues()
 {
   oldLeverPosition = currentLeverPosition;
-  gearlever.ReadGearLeverPosition(currentLeverPosition);
-  gearlever.ReadShiftRequest(currentShiftRequest, currentLeverPosition);
+  gearlever->ReadGearLever(currentShiftRequest, currentLeverPosition);
 
   if (currentLeverPosition == oldLeverPosition)
     return;
@@ -197,7 +200,7 @@ void processLeverValues()
 void resetToGear2()
 {
   // Reset all shifting vars
-  gearlever.Reset();
+  gearlever->Reset();
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
@@ -488,14 +491,14 @@ void displayOnScreen(const char* stringToDisplay)
   delay(150);
 }
 
-inline const String ToString( VaLas_Controller::GearLeverPosition v)
+inline const String ToString(VaLas_Controller::GearLeverPosition v)
 {
   switch (v)
   {
-    case  VaLas_Controller::GearLeverPosition::Park:    return "Park";
-    case  VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
-    case  VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
-    case  VaLas_Controller::GearLeverPosition::Drive:   return "Drive";
-    default:      return "Unknown";
+    case VaLas_Controller::GearLeverPosition::Park:    return "Park";
+    case VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
+    case VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
+    case VaLas_Controller::GearLeverPosition::Drive:   return "Drive";
+    default:                                           return "Unknown";
   }
 }
