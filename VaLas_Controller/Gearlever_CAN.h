@@ -12,5 +12,6 @@ class Gearlever_CAN : public Gearlever {
 		virtual void Reset();
 		
 	private:
+		void readCanBus();
 };
 #endif
