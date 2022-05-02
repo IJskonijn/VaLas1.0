@@ -19,21 +19,33 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <mcp_can.h>
 #include "Gearlever_CAN.h"
 #include "VaLas_Controller.h"
-#include "CAN_Lib/mcp2515.h"
 
 int canValue = -1;
-struct can_frame canMsg;
-MCP2515 mcp2515(9); // Pin 9
+
+long unsigned int rxId;
+unsigned char len = 0;
+unsigned char rxBuf[8];
+char msgString[128];   
+
+#define CAN_INT 2    // Set INT to pin 2
+MCP_CAN CAN(10);     // Set CS to pin 10
 
 Gearlever_CAN::Gearlever_CAN()
-{
-  SPI.begin();
+{  
+  // Initialize MCP2515 running at 8MHz with a baudrate of 500kb/s and the masks and filters disabled.
+  if(CAN.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
+    Serial.println("MCP2515 Initialized Successfully!");
+  else
+    Serial.println("Error Initializing MCP2515...");
   
-  mcp2515.reset();
-  mcp2515.setBitrate(CAN_500KBPS, MCP_8MHZ);
-  mcp2515.setNormalMode();
+  // Set operation mode to normal so the MCP2515 sends acks to received data.
+  CAN.setMode(MCP_NORMAL);
+
+  // Configuring pin for /INT input
+  pinMode(CAN_INT, INPUT);
 }
 
 void Gearlever_CAN::ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
@@ -78,34 +90,40 @@ void Gearlever_CAN::Reset()
 void Gearlever_CAN::readCanBus()
 {
   // Do the actual CAN Bus reading here
-
-// Read all can data
-//   if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) {
-//       char buffer[7];
-//       Serial.print("FRAME:ID=");
-//       Serial.print(canMsg.can_id);
-//       Serial.print(":LEN=");
-//       Serial.print(canMsg.can_dlc);
-//       char tmp[3];
-//       for (int i = 0; i<canMsg.can_dlc; i++)  {  // print the data
-//         char buffer[5];
-//         Serial.print(":");
-//         sprintf(buffer,"%02X", canMsg.data[i]);
-//         Serial.print(buffer);
-//       }
-//       Serial.println();
-//   }
-
-
-  if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK)
+  if(!digitalRead(CAN_INT))                         // If CAN_INT pin is low, read receive buffer
   {
-	if (canMsg.can_id == 0x00000230) // This is our shifter message  // Or 560? 
-	{
-	  canValue = canMsg.data[4]; // Read offset 4 > should contain the shifter position
-		// /** Gets gear selector lever position (NAG only) */
-		// EWM_230h_WHC get_WHC() const { return (EWM_230h_WHC)(raw >> 56 & 0xf); }
-	}
+    CAN.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
+    
+    if((rxId & 0x80000000) == 0x80000000)     // Determine if ID is standard (11 bits) or extended (29 bits)
+      sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
+    else
+      sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
+  
+    Serial.print(msgString);
+  
+    if((rxId & 0x40000000) == 0x40000000){    // Determine if message is a remote request frame.
+      sprintf(msgString, " REMOTE REQUEST FRAME");
+      Serial.print(msgString);
+    } else {
+      for(byte i = 0; i<len; i++){
+        sprintf(msgString, " 0x%.2X", rxBuf[i]);
+        Serial.print(msgString);
+      }
+    }
+        
+    Serial.println();
   }
+
+
+//   if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK)
+//   {
+// 	if (canMsg.can_id == 0x00000230) // This is our shifter message  // Or 560? 
+// 	{
+// 	  canValue = canMsg.data[4]; // Read offset 4 > should contain the shifter position
+// 		// /** Gets gear selector lever position (NAG only) */
+// 		// EWM_230h_WHC get_WHC() const { return (EWM_230h_WHC)(raw >> 56 & 0xf); }
+// 	}
+//   }
 
   //delay(50);
 }

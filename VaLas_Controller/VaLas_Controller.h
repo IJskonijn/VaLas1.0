@@ -45,6 +45,19 @@ class VaLas_Controller {
       UpShift,
       DownShift
     };
+
+    typedef struct
+    {
+      String Name;
+      int UpshiftDelay = 600;
+      int UpshiftLinePressure = 0;                  //  MOD_PC     min-max 255-0
+      int UpshiftShiftPressure = 0;                 //  SHIFT_PC   min-max 255-0
+      int UpshiftTorqueConverterLockup = 0;         //  TCC        min-max 0-255
+      int DownshiftDelay = 600;
+      int DownshiftLinePressure = 0;                //  MOD_PC     min-max 255-0
+      int DownshiftShiftPressure = 0;               //  SHIFT_PC   min-max 255-0
+      int DownshiftTorqueConverterLockup = 0;       //  TCC        min-max 0-255
+    }  ShiftSetting;
 		
 	private:
 };

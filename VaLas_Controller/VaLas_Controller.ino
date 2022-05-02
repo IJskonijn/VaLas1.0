@@ -16,6 +16,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include "VaLas_Controller.h"
+#include "ShiftConfig.h"
 #include "Sensors.h"
 #include "Gearlever.h"
 #include "Gearlever_CAN.h"
@@ -34,9 +35,11 @@ int y4Channel = 3; // Channel 3
 
 const char* stringToDisplayBuffer;
 
+VaLas_Controller::ShiftSetting shiftSettings[6];
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
 VaLas_Controller::ShiftRequest currentShiftRequest;
+ShiftConfig shiftConfig;
 Gearlever* gearlever;
 Sensors sensors;
 
@@ -45,6 +48,8 @@ void setup()
   Serial.begin(9600); // open the serial port at 9600 bps:
   Serial.write("Begin program");
   Serial.write("\n");
+
+  shiftConfig.CreateDefaultConfig(shiftSettings);
 
   delay(500);
 
