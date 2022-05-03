@@ -35,10 +35,13 @@ int y4Channel = 3; // Channel 3
 
 const char* stringToDisplayBuffer;
 
-VaLas_Controller::ShiftSetting shiftSettings[6];
+bool useCanBus = false;
+VaLas_Controller::ShiftSetting gearboxSettings[6];
+
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
 VaLas_Controller::ShiftRequest currentShiftRequest;
+
 ShiftConfig shiftConfig;
 Gearlever* gearlever;
 Sensors sensors;
@@ -49,7 +52,7 @@ void setup()
   Serial.write("Begin program");
   Serial.write("\n");
 
-  shiftConfig.CreateDefaultConfig(shiftSettings);
+  shiftConfig.CreateDefaultConfig(gearboxSettings);
 
   delay(500);
 

@@ -12,34 +12,76 @@ ShiftConfig::ShiftConfig()
   SerialBT.begin("VaLas_722.6_Controller");
 }
 
-void ShiftConfig::ReceiveConfigViaBluetooth()
+void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
-if (SerialBT.available()){
-    char incomingChar = SerialBT.read();
-    if (incomingChar != '\n'){
-      receivedMessage += String(incomingChar);
-    }
-    else{
-      receivedMessage = "";
-    }
-  }
+  // if (SerialBT.available()){
+  //   char incomingChar = SerialBT.read();
+  //   if (incomingChar != '\n'){
+  //     receivedMessage += String(incomingChar);
+  //   }
+  //   else{
+  //     receivedMessage = "";
+  //   }
+  // }
   
-  //char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
+  StaticJsonDocument<385> doc;
+  DeserializationError error = deserializeJson(doc, "");
 
-  DynamicJsonDocument doc(1024);
-  //deserializeJson(doc, json);
-  deserializeJson(doc, receivedMessage);
+  if (error)
+  {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+    return;
+  }
 
-  const char* sensor = doc["sensor"];
-  long time          = doc["time"];
-  double latitude    = doc["data"][0];
-  double longitude   = doc["data"][1];
+  // extract the values
+  useCanBus = doc["UseCanBus"].as<bool>();
+  for (int i = 0; i < 6; i++)
+  {
+    shiftSettings[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();
+    shiftSettings[i].UpshiftDelay = doc["GearShiftSettings"][i]["UpshiftDelay"].as<int>();
+    shiftSettings[i].UpshiftLinePressure = doc["GearShiftSettings"][i]["UpshiftLinePressure"].as<int>();
+    shiftSettings[i].UpshiftShiftPressure = doc["GearShiftSettings"][i]["UpshiftShiftPressure"].as<int>();
+    shiftSettings[i].UpshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["UpshiftTorqueConverterLockup"].as<int>();
+    shiftSettings[i].DownshiftDelay = doc["GearShiftSettings"][i]["DownshiftDelay"].as<int>();
+    shiftSettings[i].DownshiftLinePressure = doc["GearShiftSettings"][i]["DownshiftLinePressure"].as<int>();
+    shiftSettings[i].DownshiftShiftPressure = doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>();
+    shiftSettings[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
+  }
 }
 
-void ShiftConfig::SendConfigViaBluetooth()
-{}
+void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
+{
+  StaticJsonDocument<512> doc;
+  doc["UseCanBus"] = useCanBus;
+  JsonArray GearShiftSettings = doc.createNestedArray("GearShiftSettings");
+
+  // add some values
+  for(VaLas_Controller::ShiftSetting setting : shiftSettings)
+  {
+    JsonObject shiftSetting = GearShiftSettings.createNestedObject();
+    shiftSetting["Name"] = setting.Name;
+    shiftSetting["UpshiftDelay"] = setting.UpshiftDelay;
+    shiftSetting["UpshiftLinePressure"] = setting.UpshiftLinePressure;
+    shiftSetting["UpshiftShiftPressure"] = setting.UpshiftShiftPressure;
+    shiftSetting["UpshiftTorqueConverterLockup"] = setting.UpshiftTorqueConverterLockup;
+    shiftSetting["DownshiftDelay"] = setting.DownshiftDelay;
+    shiftSetting["DownshiftLinePressure"] = setting.DownshiftLinePressure;
+    shiftSetting["DownshiftShiftPressure"] = setting.DownshiftShiftPressure;
+    shiftSetting["DownshiftTorqueConverterLockup"] = setting.DownshiftTorqueConverterLockup;
+  }
+
+  // serialize the array and send the result to Serial
+  serializeJson(doc, SerialBT);
+
+}
 
 void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
+{
+  createDefaultConfig(shiftSettings);
+}
+
+void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
 {
   // Gear 1
   shiftSettings[0].Name = "D1";
