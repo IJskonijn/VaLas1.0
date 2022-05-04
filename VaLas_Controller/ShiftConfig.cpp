@@ -12,19 +12,20 @@ String receivedMessage = "";
 ShiftConfig::ShiftConfig()
 {
   SerialBT.begin("VaLas_722.6_Controller");
+  SPIFFS.begin();
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
-  // if (SerialBT.available()){
-  //   char incomingChar = SerialBT.read();
-  //   if (incomingChar != '\n'){
-  //     receivedMessage += String(incomingChar);
-  //   }
-  //   else{
-  //     receivedMessage = "";
-  //   }
-  // }
+  if (SerialBT.available()){
+    char incomingChar = SerialBT.read();
+    if (incomingChar != '\n'){
+      receivedMessage += String(incomingChar);
+    }
+    else{
+      receivedMessage = "";
+    }
+  }
   
   StaticJsonDocument<385> doc;
   DeserializationError error = deserializeJson(doc, "");
@@ -140,68 +141,80 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting (&shiftSet
 void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
 {
   // Gear 1
+  // Upshift = 1 > 2
+  // Downshift = Not available
   shiftSettings[0].Name = "D1";
   shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
-  shiftSettings[0].UpshiftShiftPressure = 0;
+  shiftSettings[0].UpshiftLinePressure = 80;
+  shiftSettings[0].UpshiftShiftPressure = 90;
   shiftSettings[0].UpshiftTorqueConverterLockup = 0;
   shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftLinePressure = 0;
+  shiftSettings[0].DownshiftShiftPressure = 0;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
   
   // Gear 2
+  // Upshift = 2 > 3
+  // Downshift = 2 > 1
   shiftSettings[0].Name = "D2";
   shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
-  shiftSettings[0].UpshiftShiftPressure = 0;
+  shiftSettings[0].UpshiftLinePressure = 80;
+  shiftSettings[0].UpshiftShiftPressure = 80;
   shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftDelay = 700;
+  shiftSettings[0].DownshiftLinePressure = 40;
+  shiftSettings[0].DownshiftShiftPressure = 40;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
   
   // Gear 3
+  // Upshift = 3 > 4
+  // Downshift = 3 > 2
   shiftSettings[0].Name = "D3";
-  shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
-  shiftSettings[0].UpshiftShiftPressure = 0;
+  shiftSettings[0].UpshiftDelay = 1200;
+  shiftSettings[0].UpshiftLinePressure = 90;
+  shiftSettings[0].UpshiftShiftPressure = 100;
   shiftSettings[0].UpshiftTorqueConverterLockup = 0;
   shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftLinePressure = 180;
+  shiftSettings[0].DownshiftShiftPressure = 180;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
   
   // Gear 4
+  // Upshift = 4 > 5
+  // Downshift = 4 > 3
   shiftSettings[0].Name = "D4";
   shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
-  shiftSettings[0].UpshiftShiftPressure = 0;
+  shiftSettings[0].UpshiftLinePressure = 120;
+  shiftSettings[0].UpshiftShiftPressure = 120;
   shiftSettings[0].UpshiftTorqueConverterLockup = 0;
   shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftLinePressure = 140;
+  shiftSettings[0].DownshiftShiftPressure = 140;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
   
   // Gear 5
+  // Upshift = 5 > 5+
+  // Downshift = 5 > 4
   shiftSettings[0].Name = "D5";
-  shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
+  shiftSettings[0].UpshiftDelay = 400;
+  shiftSettings[0].UpshiftLinePressure = 25;
   shiftSettings[0].UpshiftShiftPressure = 0;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].UpshiftTorqueConverterLockup = 255;
   shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftLinePressure = 140;
+  shiftSettings[0].DownshiftShiftPressure = 140;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
   
   // Gear 5+
+  // Upshift = Not available
+  // Downshift = 5+ > 5
   shiftSettings[0].Name = "D5+";
   shiftSettings[0].UpshiftDelay = 600;
   shiftSettings[0].UpshiftLinePressure = 0;
   shiftSettings[0].UpshiftShiftPressure = 0;
   shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 40;
-  shiftSettings[0].UpshiftShiftPressure = 40;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[0].DownshiftDelay = 400;
+  shiftSettings[0].DownshiftLinePressure = 15;
+  shiftSettings[0].DownshiftShiftPressure = 0;
+  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
 }
