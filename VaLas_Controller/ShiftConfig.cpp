@@ -28,7 +28,7 @@ void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shi
   }
   
   StaticJsonDocument<385> doc;
-  DeserializationError error = deserializeJson(doc, "");
+  DeserializationError error = deserializeJson(doc, receivedMessage);
 
   if (error)
   {

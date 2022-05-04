@@ -118,20 +118,13 @@ void loop()
 
       switch (gear)
       {
-      // case 1: // Shouldn't be able to come here
-      //   select_one_down();
-      //   break;
       case 2:
-        select_two_up();
-        break;
       case 3:
-        select_three_up();
-        break;
       case 4:
-        select_four_up();
+        upShift();
         break;
       case 5:
-        select_five_up();
+        upShift(15);
         break;
       case 6:
         select_fivetcc_up();
@@ -154,28 +147,21 @@ void loop()
 
       switch (gear)
       {
-      case 1:
-        select_one_down();
-        break;
-      case 2:
-        select_two_down();
-        break;
-      case 3:
-        select_three_down();
-        break;
-      case 4:
-        select_four_down();
-        break;
-      case 5:
-        select_five_down();
-        break;
-      // case 6: // Shouldn't be able to come here
-      //   select_fivetcc_up();
-      //   break;
-      default:
-        gear = 1;
-        currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-        return;
+        case 2:
+          downShift(20);
+          break;
+        case 1:
+        case 3:
+        case 4:
+          downShift();
+          break;
+        case 5:
+          select_five_down();
+          break;
+        default:
+          gear = 1;
+          currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+          return;
       }
     }
   }
@@ -259,7 +245,20 @@ void downShift(int customMpcAfterShift = 0)
   digitalWrite(gearPin, HIGH);
   digitalWrite(tccPin, gearboxSettings[gear-1].DownshiftTorqueConverterLockup);
 
-  delay(gearboxSettings[gear-1].DownshiftDelay);
+  if (gear == 2)
+  {
+    delay(gearboxSettings[gear-1].DownshiftDelay);
+
+    ledcWrite(mpcChannel, (gearboxSettings[gear-1].DownshiftLinePressure /2));
+    ledcWrite(spcChannel, (gearboxSettings[gear-1].DownshiftShiftPressure /2));
+    digitalWrite(gearPin, LOW);
+
+    delay(50);
+  }
+  else
+  {
+    delay(gearboxSettings[gear-1].DownshiftDelay);
+  }
 
   ledcWrite(mpcChannel, customMpcAfterShift);
   ledcWrite(spcChannel, 0);
@@ -301,109 +300,6 @@ void upShift(int customMpcAfterShift = 0)
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-
-#pragma region Downshifts
-
-void select_one_down()
-// 2 -> 1
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 1 -");
-
-  ledcWrite(mpcChannel, 40);
-  ledcWrite(spcChannel, 40);
-  digitalWrite(y3Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(700);
-
-  ledcWrite(mpcChannel, 0);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-
-  displayOnScreen("D1");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_two_down()
-// 3 -> 2
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 2 -");
-
-  ledcWrite(mpcChannel, 180);
-  ledcWrite(spcChannel, 180);
-  digitalWrite(tccPin, 0);
-
-  delay(20);
-
-  digitalWrite(y5Pin, HIGH);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 70);
-  ledcWrite(spcChannel, 70);
-  digitalWrite(y5Pin, LOW);
-
-  delay(50);
-
-  ledcWrite(mpcChannel, 20);
-  ledcWrite(spcChannel, 0);
-
-  displayOnScreen("D2");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_three_down()
-// 4 -> 3
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 3 -");
-
-  ledcWrite(mpcChannel, 140);
-  ledcWrite(spcChannel, 140);
-  digitalWrite(y4Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(spcChannel, 0);
-  ledcWrite(mpcChannel, 0);
-  digitalWrite(y4Pin, LOW);
-  digitalWrite(tccPin, 0);
-
-  delay(50);
-
-  displayOnScreen("D3");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_four_down()
-// 5 -> 4
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 4 -");
-
-  ledcWrite(mpcChannel, 140);
-  ledcWrite(spcChannel, 140);
-  digitalWrite(y3Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 0);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, 0);
-
-  displayOnScreen("D4");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
 void select_five_down()
 // 5 OD -> 5
 {
@@ -416,102 +312,6 @@ void select_five_down()
   ledcWrite(spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
-
-  displayOnScreen("D5");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-#pragma endregion Downshifts
-
-#pragma region Upshifts
-
-void select_two_up()
-// 1 -> 2
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 2 +");
-
-  ledcWrite(mpcChannel, 80);
-  ledcWrite(spcChannel, 90);
-  digitalWrite(y3Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 0);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, 0);
-
-  displayOnScreen("D2");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_three_up()
-// 2 -> 3
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 3 +");
-
-  ledcWrite(mpcChannel, 80);
-  ledcWrite(spcChannel, 80);
-  digitalWrite(y5Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 0);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y5Pin, LOW);
-  digitalWrite(tccPin, 0);
-
-  displayOnScreen("D3");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_four_up()
-// 3 -> 4
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 4 +");
-
-  ledcWrite(mpcChannel, 90);
-  ledcWrite(spcChannel, 100);
-  digitalWrite(y4Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(1200);
-
-  ledcWrite(mpcChannel, 0);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y4Pin, LOW);
-  digitalWrite(tccPin, 0);
-
-  displayOnScreen("D4");
-
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-}
-
-void select_five_up()
-// 4 -> 5
-{
-  displayOnScreen(" SHIFT");
-  Serial.println("Gear 5 +");
-
-  ledcWrite(mpcChannel, 100);
-  ledcWrite(spcChannel, 120);
-  digitalWrite(y3Pin, HIGH);
-  digitalWrite(tccPin, 0);
-
-  delay(600);
-
-  ledcWrite(mpcChannel, 15);
-  ledcWrite(spcChannel, 0);
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, LOW);
 
   displayOnScreen("D5");
 
@@ -535,8 +335,6 @@ void select_fivetcc_up()
 
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
-
-#pragma endregion Upshifts
 
 void displayOnScreen(const char* stringToDisplay)
 {
