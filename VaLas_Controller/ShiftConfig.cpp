@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <BluetoothSerial.h>
+#include "FS.h"
+#include "SPIFFS.h"
 #include "ShiftConfig.h"
 #include "VaLas_Controller.h"
 
@@ -34,23 +36,66 @@ void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shi
     return;
   }
 
-  // extract the values
-  useCanBus = doc["UseCanBus"].as<bool>();
-  for (int i = 0; i < 6; i++)
-  {
-    shiftSettings[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();
-    shiftSettings[i].UpshiftDelay = doc["GearShiftSettings"][i]["UpshiftDelay"].as<int>();
-    shiftSettings[i].UpshiftLinePressure = doc["GearShiftSettings"][i]["UpshiftLinePressure"].as<int>();
-    shiftSettings[i].UpshiftShiftPressure = doc["GearShiftSettings"][i]["UpshiftShiftPressure"].as<int>();
-    shiftSettings[i].UpshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["UpshiftTorqueConverterLockup"].as<int>();
-    shiftSettings[i].DownshiftDelay = doc["GearShiftSettings"][i]["DownshiftDelay"].as<int>();
-    shiftSettings[i].DownshiftLinePressure = doc["GearShiftSettings"][i]["DownshiftLinePressure"].as<int>();
-    shiftSettings[i].DownshiftShiftPressure = doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>();
-    shiftSettings[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
-  }
+  createObjectFromJson(shiftSettings, useCanBus, doc);
 }
 
 void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
+{
+  StaticJsonDocument<512> doc = createJsonFromObject(shiftSettings, useCanBus);
+
+  // serialize the array and send the result to Serial Bluetooth
+  serializeJson(doc, SerialBT);
+}
+
+void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
+{
+  createDefaultConfig(shiftSettings);
+}
+
+
+bool ShiftConfig::LoadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {
+  const char filePath[16] = "/config.json"; 
+  File file = SPIFFS.open(filePath, "r");
+  if (!file) {
+    Serial.println("Failed to open config file");
+    return false;
+  }
+
+  StaticJsonDocument<385> doc;
+  DeserializationError error = deserializeJson(doc, file);
+
+  if (error)
+  {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+    return false;
+  }
+
+  createObjectFromJson(shiftSettings, useCanBus, doc);
+
+  file.close();
+  return true;
+}
+
+bool ShiftConfig::WriteConfigToFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {  
+  const char filePath[16] = "/config.json";  
+  File file = SPIFFS.open(filePath, "w");
+  if (!file) {    
+    return false;
+  }
+  
+  StaticJsonDocument<512> doc = createJsonFromObject(shiftSettings, useCanBus);
+
+  if (serializeJson(doc, file) == 0) {
+    file.close();
+    return false;
+  }  
+
+  file.close();
+  return true;
+}
+
+StaticJsonDocument<512> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
   StaticJsonDocument<512> doc;
   doc["UseCanBus"] = useCanBus;
@@ -71,14 +116,25 @@ void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftS
     shiftSetting["DownshiftTorqueConverterLockup"] = setting.DownshiftTorqueConverterLockup;
   }
 
-  // serialize the array and send the result to Serial
-  serializeJson(doc, SerialBT);
-
+  return doc;
 }
 
-void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus, StaticJsonDocument<385> doc)
 {
-  createDefaultConfig(shiftSettings);
+  // extract the values
+  useCanBus = doc["UseCanBus"].as<bool>();
+  for (int i = 0; i < 6; i++)
+  {
+    shiftSettings[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();
+    shiftSettings[i].UpshiftDelay = doc["GearShiftSettings"][i]["UpshiftDelay"].as<int>();
+    shiftSettings[i].UpshiftLinePressure = doc["GearShiftSettings"][i]["UpshiftLinePressure"].as<int>();
+    shiftSettings[i].UpshiftShiftPressure = doc["GearShiftSettings"][i]["UpshiftShiftPressure"].as<int>();
+    shiftSettings[i].UpshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["UpshiftTorqueConverterLockup"].as<int>();
+    shiftSettings[i].DownshiftDelay = doc["GearShiftSettings"][i]["DownshiftDelay"].as<int>();
+    shiftSettings[i].DownshiftLinePressure = doc["GearShiftSettings"][i]["DownshiftLinePressure"].as<int>();
+    shiftSettings[i].DownshiftShiftPressure = doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>();
+    shiftSettings[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
+  }
 }
 
 void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
