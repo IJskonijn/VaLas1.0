@@ -52,7 +52,7 @@ void setup()
   Serial.write("Begin program");
   Serial.write("\n");
 
-  shiftConfig.CreateDefaultConfig(gearboxSettings);
+  shiftConfig.LoadDefaultConfig(gearboxSettings, useCanBus);
 
   delay(500);
 

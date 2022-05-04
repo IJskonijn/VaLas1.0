@@ -48,13 +48,18 @@ void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftS
   serializeJson(doc, SerialBT);
 }
 
-void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
+void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
+  bool isLoadedFromFile = loadConfigFromFile(shiftSettings, useCanBus);
+  if (isLoadedFromFile)
+    return;
+
   createDefaultConfig(shiftSettings);
+  writeConfigToFile(shiftSettings, useCanBus);
 }
 
 
-bool ShiftConfig::LoadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
   if (!file) {
@@ -78,7 +83,7 @@ bool ShiftConfig::LoadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSetti
   return true;
 }
 
-bool ShiftConfig::WriteConfigToFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {  
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus) {  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
   if (!file) {    
