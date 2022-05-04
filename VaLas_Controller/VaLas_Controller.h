@@ -20,7 +20,13 @@
 #define mpcPin 39            // Line pressure      MOD_PC     min-max 255-0
 #define spcPin 41            // Shift pressure     SHIFT_PC   min-max 255-0
 #define tccPin 43            // Turbine lockup     TCC        min-max 0-255
-#define atfTempPin 40        // ATF temp / P-N switch 
+
+// #define atfTempPin 40        // ATF temp / P-N switch 
+// #define n2Pin 41        // ATF temp / P-N switch 
+// #define n3Pin 42        // ATF temp / P-N switch 
+#define PIN_ATF gpio_num_t::GPIO_NUM_26 // ATF temp sensor and lockout
+#define PIN_N3 gpio_num_t::GPIO_NUM_27 // N3 speed sensor
+#define PIN_N2 gpio_num_t::GPIO_NUM_14 // N3 speed sensor
 
 #define elrTogglePin 100
 #define elrPwmPin 101

@@ -7,8 +7,9 @@ class Sensors {
 		Sensors();
         int ReadAtfTemp();
         int ReadRpm();
-        int ReadN2();
-        int ReadN3();
+        bool init_sensors();
+        bool read_input_rpm(int& n2Rpm, int& n3Rpm, int& calcRpm, bool check_sanity);
+        bool read_atf_temp(int* dest);
 		
 	private:
 };

@@ -236,6 +236,72 @@ void resetToGear2()
     gear = 2;
 }
 
+
+//  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
+void downShift(int customMpcAfterShift = 0)
+{
+  displayOnScreen(" SHIFT");
+  String screenVarD = "D" + gear;
+  Serial.println("Downshift to " + screenVarD);
+
+  int gearPin = -1;
+  if (gear == 1 || gear == 4)
+    gearPin = y3Pin;
+  else if (gear == 3)
+    gearPin = y4Pin;
+  else if (gear == 2)
+    gearPin = y5Pin;
+  else
+    return; // Something went wrong
+
+  ledcWrite(mpcChannel, gearboxSettings[gear-1].DownshiftLinePressure);
+  ledcWrite(spcChannel, gearboxSettings[gear-1].DownshiftShiftPressure);
+  digitalWrite(gearPin, HIGH);
+  digitalWrite(tccPin, gearboxSettings[gear-1].DownshiftTorqueConverterLockup);
+
+  delay(gearboxSettings[gear-1].DownshiftDelay);
+
+  ledcWrite(mpcChannel, customMpcAfterShift);
+  ledcWrite(spcChannel, 0);
+  digitalWrite(gearPin, LOW);
+
+  displayOnScreen(screenVarD.c_str());
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+}
+
+//  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
+void upShift(int customMpcAfterShift = 0)
+{
+  displayOnScreen(" SHIFT");
+  String screenVarD = "D" + gear;
+  Serial.println("Upshift to " + screenVarD);
+
+  int gearPin = -1;
+  if (gear == 2 || gear == 5)
+    gearPin = y3Pin;
+  else if (gear == 4)
+    gearPin = y4Pin;
+  else if (gear == 3)
+    gearPin = y5Pin;
+  else
+    return; // Something went wrong
+
+  ledcWrite(mpcChannel, gearboxSettings[gear-1].UpshiftLinePressure);
+  ledcWrite(spcChannel, gearboxSettings[gear-1].UpshiftShiftPressure);
+  digitalWrite(gearPin, HIGH);
+  digitalWrite(tccPin, gearboxSettings[gear-1].UpshiftTorqueConverterLockup);
+
+  delay(gearboxSettings[gear-1].UpshiftDelay);
+
+  ledcWrite(mpcChannel, customMpcAfterShift);
+  ledcWrite(spcChannel, 0);
+  digitalWrite(gearPin, LOW);
+
+  displayOnScreen(screenVarD.c_str());
+  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+}
+
+
 #pragma region Downshifts
 
 void select_one_down()
