@@ -121,7 +121,7 @@ void loop()
       case 2:
       case 3:
       case 4:
-        upShift();
+        upShift(0);
         break;
       case 5:
         upShift(15);
@@ -153,7 +153,7 @@ void loop()
         case 1:
         case 3:
         case 4:
-          downShift();
+          downShift(0);
           break;
         case 5:
           select_five_down();
@@ -224,7 +224,7 @@ void resetToGear2()
 
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
-void downShift(int customMpcAfterShift = 0)
+void downShift(int customMpcAfterShift)
 {
   displayOnScreen(" SHIFT");
   String screenVarD = "D" + gear;
@@ -269,7 +269,7 @@ void downShift(int customMpcAfterShift = 0)
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
-void upShift(int customMpcAfterShift = 0)
+void upShift(int customMpcAfterShift)
 {
   displayOnScreen(" SHIFT");
   String screenVarD = "D" + gear;
