@@ -187,7 +187,8 @@ void processLeverValues()
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive)
   {
     delay(500);
-    String screenVarD = "" + screenVar + gear;
+    String intToString = String(gear);
+    String screenVarD = "" + screenVar + intToString;
     displayOnScreen(screenVarD.c_str());
   }
 }
@@ -227,7 +228,8 @@ void resetToGear2()
 void downShift(int customMpcAfterShift)
 {
   displayOnScreen(" SHIFT");
-  String screenVarD = "D" + gear;
+  String intToString = String(gear);
+  String screenVarD = "D" + intToString;
   Serial.println("Downshift to " + screenVarD);
 
   int gearPin = -1;
@@ -272,7 +274,8 @@ void downShift(int customMpcAfterShift)
 void upShift(int customMpcAfterShift)
 {
   displayOnScreen(" SHIFT");
-  String screenVarD = "D" + gear;
+  String intToString = String(gear);
+  String screenVarD = "D" + intToString;
   Serial.println("Upshift to " + screenVarD);
 
   int gearPin = -1;

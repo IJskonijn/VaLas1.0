@@ -11,8 +11,8 @@ String receivedMessage = "";
 
 ShiftConfig::ShiftConfig()
 {
-  SerialBT.begin("VaLas_722.6_Controller");
-  SPIFFS.begin();
+  // SerialBT.begin("VaLas_722.6_Controller");
+  // SPIFFS.begin();
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
@@ -50,12 +50,12 @@ void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftS
 
 void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
-  bool isLoadedFromFile = loadConfigFromFile(shiftSettings, useCanBus);
-  if (isLoadedFromFile)
-    return;
+  // bool isLoadedFromFile = loadConfigFromFile(shiftSettings, useCanBus);
+  // if (isLoadedFromFile)
+  //   return;
 
   createDefaultConfig(shiftSettings);
-  writeConfigToFile(shiftSettings, useCanBus);
+  //writeConfigToFile(shiftSettings, useCanBus);
 }
 
 
