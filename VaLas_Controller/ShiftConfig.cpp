@@ -161,65 +161,65 @@ void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSett
   // Gear 2
   // Upshift = 2 > 3
   // Downshift = 2 > 1
-  shiftSettings[0].Name = "D2";
-  shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 80;
-  shiftSettings[0].UpshiftShiftPressure = 80;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 700;
-  shiftSettings[0].DownshiftLinePressure = 40;
-  shiftSettings[0].DownshiftShiftPressure = 40;
-  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
+  shiftSettings[1].Name = "D2";
+  shiftSettings[1].UpshiftDelay = 600;
+  shiftSettings[1].UpshiftLinePressure = 80;
+  shiftSettings[1].UpshiftShiftPressure = 80;
+  shiftSettings[1].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[1].DownshiftDelay = 700;
+  shiftSettings[1].DownshiftLinePressure = 40;
+  shiftSettings[1].DownshiftShiftPressure = 40;
+  shiftSettings[1].DownshiftTorqueConverterLockup = 0;
   
   // Gear 3
   // Upshift = 3 > 4
   // Downshift = 3 > 2
-  shiftSettings[0].Name = "D3";
-  shiftSettings[0].UpshiftDelay = 1200;
-  shiftSettings[0].UpshiftLinePressure = 90;
-  shiftSettings[0].UpshiftShiftPressure = 100;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].DownshiftLinePressure = 180;
-  shiftSettings[0].DownshiftShiftPressure = 180;
-  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
+  shiftSettings[2].Name = "D3";
+  shiftSettings[2].UpshiftDelay = 1200;
+  shiftSettings[2].UpshiftLinePressure = 90;
+  shiftSettings[2].UpshiftShiftPressure = 100;
+  shiftSettings[2].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[2].DownshiftDelay = 600;
+  shiftSettings[2].DownshiftLinePressure = 180;
+  shiftSettings[2].DownshiftShiftPressure = 180;
+  shiftSettings[2].DownshiftTorqueConverterLockup = 0;
   
   // Gear 4
   // Upshift = 4 > 5
   // Downshift = 4 > 3
-  shiftSettings[0].Name = "D4";
-  shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 120;
-  shiftSettings[0].UpshiftShiftPressure = 120;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].DownshiftLinePressure = 140;
-  shiftSettings[0].DownshiftShiftPressure = 140;
-  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
+  shiftSettings[3].Name = "D4";
+  shiftSettings[3].UpshiftDelay = 600;
+  shiftSettings[3].UpshiftLinePressure = 120;
+  shiftSettings[3].UpshiftShiftPressure = 120;
+  shiftSettings[3].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[3].DownshiftDelay = 600;
+  shiftSettings[3].DownshiftLinePressure = 140;
+  shiftSettings[3].DownshiftShiftPressure = 140;
+  shiftSettings[3].DownshiftTorqueConverterLockup = 0;
   
   // Gear 5
   // Upshift = 5 > 5+
   // Downshift = 5 > 4
-  shiftSettings[0].Name = "D5";
-  shiftSettings[0].UpshiftDelay = 400;
-  shiftSettings[0].UpshiftLinePressure = 25;
-  shiftSettings[0].UpshiftShiftPressure = 0;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 255;
-  shiftSettings[0].DownshiftDelay = 600;
-  shiftSettings[0].DownshiftLinePressure = 140;
-  shiftSettings[0].DownshiftShiftPressure = 140;
-  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
+  shiftSettings[4].Name = "D5";
+  shiftSettings[4].UpshiftDelay = 400;
+  shiftSettings[4].UpshiftLinePressure = 25;
+  shiftSettings[4].UpshiftShiftPressure = 0;
+  shiftSettings[4].UpshiftTorqueConverterLockup = 255;
+  shiftSettings[4].DownshiftDelay = 600;
+  shiftSettings[4].DownshiftLinePressure = 140;
+  shiftSettings[4].DownshiftShiftPressure = 140;
+  shiftSettings[4].DownshiftTorqueConverterLockup = 0;
   
   // Gear 5+
   // Upshift = Not available
   // Downshift = 5+ > 5
-  shiftSettings[0].Name = "D5+";
-  shiftSettings[0].UpshiftDelay = 600;
-  shiftSettings[0].UpshiftLinePressure = 0;
-  shiftSettings[0].UpshiftShiftPressure = 0;
-  shiftSettings[0].UpshiftTorqueConverterLockup = 0;
-  shiftSettings[0].DownshiftDelay = 400;
-  shiftSettings[0].DownshiftLinePressure = 15;
-  shiftSettings[0].DownshiftShiftPressure = 0;
-  shiftSettings[0].DownshiftTorqueConverterLockup = 0;
+  shiftSettings[5].Name = "D5+";
+  shiftSettings[5].UpshiftDelay = 600;
+  shiftSettings[5].UpshiftLinePressure = 0;
+  shiftSettings[5].UpshiftShiftPressure = 0;
+  shiftSettings[5].UpshiftTorqueConverterLockup = 0;
+  shiftSettings[5].DownshiftDelay = 400;
+  shiftSettings[5].DownshiftLinePressure = 15;
+  shiftSettings[5].DownshiftShiftPressure = 0;
+  shiftSettings[5].DownshiftTorqueConverterLockup = 0;
 }
