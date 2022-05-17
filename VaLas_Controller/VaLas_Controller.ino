@@ -90,7 +90,10 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
 
-  gearlever = new Gearlever_Modded();
+  if (useCanBus)
+    gearlever = new Gearlever_CAN();
+  else
+    gearlever = new Gearlever_Modded();
 
   currentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
@@ -127,7 +130,7 @@ void loop()
         upShift(15);
         break;
       case 6:
-        select_fivetcc_up();
+        select_five_to_fivetcc();
         break;
       default:
         gear = 6;
@@ -156,7 +159,7 @@ void loop()
           downShift(0);
           break;
         case 5:
-          select_five_down();
+          select_fivetcc_to_five();
           break;
         default:
           gear = 1;
@@ -303,7 +306,7 @@ void upShift(int customMpcAfterShift)
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_five_down()
+void select_fivetcc_to_five()
 // 5 OD -> 5
 {
   displayOnScreen(" SHIFT");
@@ -321,7 +324,7 @@ void select_five_down()
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void select_fivetcc_up()
+void select_five_to_fivetcc()
 // 5 -> 5 OD
 {
   displayOnScreen(" SHIFT");
