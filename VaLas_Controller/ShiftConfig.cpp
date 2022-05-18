@@ -8,11 +8,17 @@
 
 BluetoothSerial SerialBT;
 String receivedMessage = "";
+bool spiffsMountingSuccess = false;
 
 ShiftConfig::ShiftConfig()
 {
-  // SerialBT.begin("VaLas_722.6_Controller");
-  // SPIFFS.begin();
+  SerialBT.begin("VaLas_722.6_Controller");
+
+  if (!SPIFFS.begin(true)) {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+  spiffsMountingSuccess = true;
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
@@ -50,12 +56,19 @@ void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftS
 
 void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
 {
-  // bool isLoadedFromFile = loadConfigFromFile(shiftSettings, useCanBus);
-  // if (isLoadedFromFile)
-  //   return;
+  if (spiffsMountingSuccess)
+  {
+    bool isLoadedFromFile = loadConfigFromFile(shiftSettings, useCanBus);
+    if (isLoadedFromFile)
+      return;
 
-  createDefaultConfig(shiftSettings);
-  //writeConfigToFile(shiftSettings, useCanBus);
+    createDefaultConfig(shiftSettings);
+    writeConfigToFile(shiftSettings, useCanBus);
+  }
+  else
+  {
+    createDefaultConfig(shiftSettings);
+  }
 }
 
 
@@ -145,6 +158,8 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting (&shiftSet
 
 void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6])
 {
+  Serial.println("Creating a default config");
+
   // Gear 1
   // Upshift = 1 > 2
   // Downshift = Not available

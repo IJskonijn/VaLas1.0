@@ -17,7 +17,9 @@ int old_upshift = 0;
 int old_downshift = 0;
 
 Gearlever_Modded::Gearlever_Modded()
-{}
+{
+  Serial.println("Using modded gearlever");
+}
 
 void Gearlever_Modded::ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
 {
@@ -66,7 +68,6 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentS
   // Do nothing if not in Drive
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive)
     return;
-
 
   // check ShiftRequest::UpShift transition
   up_shift = digitalRead(upShiftPin);
