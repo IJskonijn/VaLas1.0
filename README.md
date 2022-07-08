@@ -9,6 +9,9 @@ This contoller is now being used on 4 different vehicles with varying power outp
 My personal vehicle has been driven past +10 000km/10 months period, basically trouble free and daily driving with same code.  
 My vehicle specs: om606+8mm pump, he531 turbocharger, 722.6 from 270 cdi(+500k odo).  
 
+Code and adjustments are from my vehicle, and should work smoothly even in paved surfaces. Shifting from 3-4 is meant for undrilled gearbox valve plate. 
+After drilling valve plate, you can use base adjustments of 3-4 shift and tune from that.  
+
 <br/>
 
 Controller has gears 1-5+.  
@@ -25,10 +28,10 @@ OLED display helps knowing which gear you are, since this controller has no mean
 When in position D, you can use 2 electric switches for contolling gears 1-5+.  
 Shifts are completed as whole, and cannot be overlapped even if switch is stuck at either +/- position.  
 
-<br/>
+A dead tiptronic gearlever was modified to have the +/- work as basic electric switches. (See photos)  
+Also the potmeter in the lever assembly was used for reading P-R-N-D positions.  
 
-Code and adjustments are from my vehicle, and should work smoothly even in paved surfaces. Shifting from 3-4 is meant for undrilled gearbox valve plate. 
-After drilling valve plate, you can use base adjustments of 3-4 shift and tune from that.  
+In the future support for a working tiptronic gearlever with CAN-BUS would be better.  
 
 <br/>
 
