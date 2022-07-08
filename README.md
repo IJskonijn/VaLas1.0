@@ -17,7 +17,7 @@ OLED display helps knowing which gear you are, since this controller has no mean
 
 <br/>
 
-How to use V1.1:  
+###### How to use V1.1:  
 1. When vehicle is started, use relay to turn controller on.
 2. Controller should now start, displaying P, R, N, or D. If in D, after a while D2 will appear which means controller is in gear 2.
 3. Now you can use shifter freely between P-R-N-D, and use +/- in D.
@@ -32,7 +32,7 @@ After drilling valve plate, you can use base adjustments of 3-4 shift and tune f
 
 <br/>
 
-Transmission has 6 solenoids controlled by arduino:  
+###### Transmission has 6 solenoids controlled by arduino:  
 - Shift pc     : pressure apllied during shifts :adjustment range 0-255 0=low pressure, pwm
 - Mod pc       : pressure apllied when in gear  :adjustment range 0-255 0=low pressure, pwm
 - Tcc          : engages turbine lock           :adjustment range 0-255 0=low pressure, pwm
