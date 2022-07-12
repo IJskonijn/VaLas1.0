@@ -17,13 +17,11 @@
 #include <Wire.h>
 #include "VaLas_Controller.h"
 #include "ShiftConfig.h"
+#include "DisplayHandler.h"
 #include "Sensors.h"
 #include "Gearlever.h"
 #include "Gearlever_CAN.h"
 #include "Gearlever_Modded.h"
-
-// 128x64 for 0.96" OLED
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
 int gear;
 
@@ -32,8 +30,6 @@ int mpcChannel = 0; // Channel 0
 int spcChannel = 1; // Channel 1
 int tccChannel = 2; // Channel 2
 int y4Channel = 3; // Channel 3
-
-const char* stringToDisplayBuffer;
 
 bool useCanBus = false;
 VaLas_Controller::ShiftSetting gearboxSettings[6];
@@ -45,6 +41,7 @@ VaLas_Controller::ShiftRequest currentShiftRequest;
 ShiftConfig shiftConfig;
 Gearlever* gearlever;
 Sensors sensors;
+DisplayHandler displayHandler;
 
 void setup()
 {
@@ -56,10 +53,9 @@ void setup()
 
   delay(500);
 
-  u8g2.begin();
-  displayOnScreen("VaLas");
+  displayHandler.DisplayOnScreen("VaLas");
   delay(1500);
-  displayOnScreen("Ver. 1.1");
+  displayHandler.DisplayOnScreen("Ver. 1.1");
   delay(1500);
 
   pinMode(upShiftPin, INPUT_PULLUP);
@@ -107,7 +103,7 @@ void loop()
   while (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
   {
     processLeverValues();
-    displayOnScreen("");
+    displayHandler.DisplayOnScreen("");
   }
   // While stopped, a switch as been pressed while in Drive
 
@@ -182,17 +178,17 @@ void processLeverValues()
   resetToGear2();
 
   // Log and display
-  String printVar = ToString(currentLeverPosition) + " selected";
+  String printVar = displayHandler.ToString(currentLeverPosition) + " selected";
   String screenVar = "" + printVar.substring(0,1); // Take first character. Example Park would print: - P -
   Serial.println(printVar);
-  displayOnScreen(screenVar.c_str());
+  displayHandler.DisplayOnScreen(screenVar.c_str());
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive)
   {
     delay(500);
     String intToString = String(gear);
     String screenVarD = "" + screenVar + intToString;
-    displayOnScreen(screenVarD.c_str());
+    displayHandler.DisplayOnScreen(screenVarD.c_str());
   }
 }
 
@@ -230,7 +226,7 @@ void resetToGear2()
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
 void downShift(int customMpcAfterShift)
 {
-  displayOnScreen(" SHIFT");
+  displayHandler.DisplayOnScreen(" SHIFT");
   String intToString = String(gear);
   String screenVarD = "D" + intToString;
   Serial.println("Downshift to " + screenVarD);
@@ -269,14 +265,14 @@ void downShift(int customMpcAfterShift)
   ledcWrite(spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  displayOnScreen(screenVarD.c_str());
+  displayHandler.DisplayOnScreen(screenVarD.c_str());
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
 void upShift(int customMpcAfterShift)
 {
-  displayOnScreen(" SHIFT");
+  displayHandler.DisplayOnScreen(" SHIFT");
   String intToString = String(gear);
   String screenVarD = "D" + intToString;
   Serial.println("Upshift to " + screenVarD);
@@ -302,14 +298,14 @@ void upShift(int customMpcAfterShift)
   ledcWrite(spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  displayOnScreen(screenVarD.c_str());
+  displayHandler.DisplayOnScreen(screenVarD.c_str());
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 void select_fivetcc_to_five()
 // 5 OD -> 5
 {
-  displayOnScreen(" SHIFT");
+  displayHandler.DisplayOnScreen(" SHIFT");
   Serial.println("Gear 5 -");
 
   delay(400);
@@ -319,7 +315,7 @@ void select_fivetcc_to_five()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  displayOnScreen("D5");
+  displayHandler.DisplayOnScreen("D5");
 
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
@@ -327,7 +323,7 @@ void select_fivetcc_to_five()
 void select_five_to_fivetcc()
 // 5 -> 5 OD
 {
-  displayOnScreen(" SHIFT");
+  displayHandler.DisplayOnScreen(" SHIFT");
   Serial.println("Gear 5tcc +");
 
   delay(400);
@@ -337,47 +333,8 @@ void select_five_to_fivetcc()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
 
-  displayOnScreen("D5+ ");
+  displayHandler.DisplayOnScreen("D5+ ");
 
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
-void displayOnScreen(const char* stringToDisplay)
-{
-  if (strlen(stringToDisplay) > 0)
-  {
-    stringToDisplayBuffer = stringToDisplay;
-  }
-
-  u8g2.clearBuffer();
-
-  // Draw gear      
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplayBuffer);
-
-  // Draw ATF temp
-  String atfTemp;
-  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
-    atfTemp = String("-");
-  else
-    atfTemp = String(sensors.ReadAtfTemp());
-
-  String tempVar = "ATF: " + atfTemp;// + String(" C");
-  u8g2.setFont(u8g2_font_logisoso18_tr);
-  u8g2.drawStr(10, 65, tempVar.c_str());
-  u8g2.sendBuffer();
-
-  delay(150);
-}
-
-inline const String ToString(VaLas_Controller::GearLeverPosition v)
-{
-  switch (v)
-  {
-    case VaLas_Controller::GearLeverPosition::Park:    return "Park";
-    case VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
-    case VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
-    case VaLas_Controller::GearLeverPosition::Drive:   return "Drive";
-    default:                                           return "Unknown";
-  }
-}
