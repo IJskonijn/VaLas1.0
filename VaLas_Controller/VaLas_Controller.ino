@@ -53,10 +53,7 @@ void setup()
 
   delay(500);
 
-  displayHandler.DisplayOnScreen("VaLas");
-  delay(1500);
-  displayHandler.DisplayOnScreen("Ver. 1.1");
-  delay(1500);
+  displayHandler.DisplayStartupOnScreen();
 
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);

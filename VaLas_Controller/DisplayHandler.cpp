@@ -14,6 +14,23 @@ DisplayHandler::DisplayHandler()
   u8g2.begin();
 }
 
+void DisplayHandler::DisplayStartupOnScreen()
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, "VaLas");
+  u8g2.sendBuffer();
+  
+  delay(1500);
+
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, "Ver. 1.1");
+  u8g2.sendBuffer();
+
+  delay(1500);
+}
+
 void DisplayHandler::DisplayOnScreen(const char* stringToDisplay)
 {
   DisplayOnScreen(stringToDisplay, VaLas_Controller::GearLeverPosition::Unknown, -1);
