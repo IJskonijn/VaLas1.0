@@ -54,6 +54,14 @@ class VaLas_Controller {
 
     typedef struct
     {
+      int mpcChannel = 0; // Channel 0
+      int spcChannel = 1; // Channel 1
+      int tccChannel = 2; // Channel 2
+      int y4Channel = 3;  // Channel 3
+    } PwmChannels;
+
+    typedef struct
+    {
       String Name;
       int UpshiftDelay = 600;
       int UpshiftLinePressure = 0;                  //  MOD_PC     min-max 255-0
