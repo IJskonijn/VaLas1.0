@@ -4,51 +4,30 @@
 #include <Wire.h>
 #include "DisplayHandler.h"
 #include "VaLas_Controller.h"
+#include "TaskStructs.h"
 
 // 128x64 for 0.96" OLED
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
-const char* stringToDisplayBuffer;
 
 DisplayHandler::DisplayHandler()
 {
   u8g2.begin();
 }
 
-void DisplayHandler::DisplayStartupOnScreen()
+void DisplayHandler::execute(void * parameter)
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "VaLas");
-  u8g2.sendBuffer();
-  
-  delay(1500);
+  TaskStructs::DisplayHandlerParameters *parameters = (TaskStructs::DisplayHandlerParameters*) parameter;   
+  VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
+  int currentGear = *(parameters->currentGearPtr);
+  int atfTemp = *(parameters->atfTempPtr);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "Ver. 1.1");
-  u8g2.sendBuffer();
-
-  delay(1500);
-}
-
-void DisplayHandler::DisplayOnScreen(const char* stringToDisplay)
-{
-  DisplayOnScreen(stringToDisplay, VaLas_Controller::GearLeverPosition::Unknown, -1);
-}
-
-void DisplayHandler::DisplayOnScreen(const char* stringToDisplay, VaLas_Controller::GearLeverPosition currentLeverPosition, int atfTemp)
-{
   String atfTempToDisplay = String("-");
-  if (strlen(stringToDisplay) > 0)
-  {
-    stringToDisplayBuffer = stringToDisplay;
-  }
 
   u8g2.clearBuffer();
 
   // Draw gear      
   u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplayBuffer);
+  u8g2.drawStr(1, 29, ToString(currentLeverPosition, currentGear).c_str());
 
   // Draw ATF temp
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Unknown)
@@ -65,17 +44,65 @@ void DisplayHandler::DisplayOnScreen(const char* stringToDisplay, VaLas_Controll
   }
 
   u8g2.sendBuffer();
-  delay(150);
 }
 
-const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition v)
+void DisplayHandler::DisplayStartupOnScreen()
 {
-  switch (v)
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, "VaLas");
+  u8g2.sendBuffer();
+  
+  vTaskDelay(1500); // delay(1500);
+
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, "Ver. 1.1");
+  u8g2.sendBuffer();
+
+  vTaskDelay(1500); // delay(1500);
+}
+
+void DisplayHandler::DisplayOnScreen(String stringToDisplay)
+{
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, stringToDisplay.c_str());
+  u8g2.sendBuffer();
+  
+  vTaskDelay(500); // delay(500);
+}
+
+const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition)
+{
+  switch (leverPosition)
   {
     case VaLas_Controller::GearLeverPosition::Park:    return "Park";
     case VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
     case VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
     case VaLas_Controller::GearLeverPosition::Drive:   return "Drive";
     default:                                           return "Unknown";
+  }
+}
+
+const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition, int currentGear)
+{
+  String printVar = ToString(leverPosition);
+  String screenVar = "" + printVar.substring(0,1); // Take first character. Example Park would print: P
+
+  // For now display the current gear in every lever position except P. (For dev purposes)
+  // If not needed anymore, change implementation to only display gear number in D or D and R.
+  if (screenVar == "P")
+    return screenVar;
+
+  switch (currentGear)
+  {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:  return "" + screenVar + currentGear;
+    case 6:  return "D5+";
+    default: return "U";
   }
 }

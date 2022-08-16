@@ -1,20 +1,17 @@
 #include <Arduino.h>
+#include "TaskStructs.h"
 #include "ShiftControl.h"
 #include "ShiftConfig.h"
-#include "VaLas_Controller.h"
-#include "displayHandler.h"
 #include "Sensors.h"
 #include "Gearlever.h"
 #include "Gearlever_CAN.h"
 #include "Gearlever_Modded.h"
 
-ShiftConfig shiftConfig;
 VaLas_Controller::PwmChannels* pwmChannelsPointer;
 DisplayHandler* displayHandlerPointer;
 Gearlever* gearlever;
 
-bool useCanBus = false;
-VaLas_Controller::ShiftSetting gearboxSettings[6];
+VaLas_Controller::ShiftSetting* gearboxSettings;
 
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
@@ -27,29 +24,29 @@ void ShiftControl::Init(DisplayHandler* displayHandlerPtr, VaLas_Controller::Pwm
 {
   displayHandlerPointer = displayHandlerPtr;
   pwmChannelsPointer = pwmChannelsPtr;
-  
-  if (useCanBus)
-    gearlever = new Gearlever_CAN();
-  else
-    gearlever = new Gearlever_Modded();
-
-  currentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-  gear = 2;
-
-  shiftConfig.LoadDefaultConfig(gearboxSettings, useCanBus);
 }
 
-void ShiftControl::DoTheStuff()
+void ShiftControl::execute(void * parameter)
 {
+  TaskStructs::ShiftControlParameters *parameters = (TaskStructs::ShiftControlParameters*) parameter;
+  gear = *(parameters->gearPtr);
+  gearlever = parameters->gearLeverPtr;
+  gearboxSettings = parameters->shiftSettings;
+  oldLeverPosition = *(parameters->oldLeverPositionPtr);
+  currentLeverPosition = *(parameters->currentLeverPositionPtr);
+  currentShiftRequest = *(parameters->currentShiftRequestPtr);
+
   processLeverValues();
 
-  while (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
-  {
-    processLeverValues();
-    displayHandlerPointer->DisplayOnScreen("");
-  }
+  // Need to rework this, because the leverpositions are now automatically changed in the gearlever class with its own task
+  // while (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
+  // {
+  //   processLeverValues();
+  // }
   // While stopped, a switch as been pressed while in Drive
+
+  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
+    return; // Nothing to do if there is no shiftrequest 
 
   // Check for the up_shift
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
@@ -57,7 +54,7 @@ void ShiftControl::DoTheStuff()
     if ((gear >= 1) && (gear <= 6))
     {
       gear++;
-      delay(100);
+      vTaskDelay(50); // delay(50);
 
       switch (gear)
       {
@@ -86,7 +83,7 @@ void ShiftControl::DoTheStuff()
     if ((gear >= 1) && (gear <= 6))
     {
       gear--;
-      delay(100);
+      vTaskDelay(50); // delay(50);
 
       switch (gear)
       {
@@ -112,9 +109,6 @@ void ShiftControl::DoTheStuff()
 
 void ShiftControl::processLeverValues()
 {
-  oldLeverPosition = currentLeverPosition;
-  gearlever->ReadGearLever(currentShiftRequest, currentLeverPosition);
-
   if (currentLeverPosition == oldLeverPosition)
     return;
 
@@ -122,18 +116,8 @@ void ShiftControl::processLeverValues()
   resetToGear2();
 
   // Log and display
-  String printVar = displayHandlerPointer->ToString(currentLeverPosition) + " selected";
-  String screenVar = "" + printVar.substring(0,1); // Take first character. Example Park would print: - P -
+  String printVar = displayHandlerPointer->ToString(currentLeverPosition, gear) + " selected";
   Serial.println(printVar);
-  displayHandlerPointer->DisplayOnScreen(screenVar.c_str());
-
-  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive)
-  {
-    delay(500);
-    String intToString = String(gear);
-    String screenVarD = "" + screenVar + intToString;
-    displayHandlerPointer->DisplayOnScreen(screenVarD.c_str());
-  }
 }
 
 void ShiftControl::resetToGear2()
@@ -170,9 +154,8 @@ void ShiftControl::resetToGear2()
 void ShiftControl::downShift(int customMpcAfterShift)
 {
   displayHandlerPointer->DisplayOnScreen(" SHIFT");
-  String intToString = String(gear);
-  String screenVarD = "D" + intToString;
-  Serial.println("Downshift to " + screenVarD);
+  String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
+  Serial.println("Downshift to " + screenVar);
 
   int gearPin = -1;
   if (gear == 1 || gear == 4)
@@ -191,24 +174,23 @@ void ShiftControl::downShift(int customMpcAfterShift)
 
   if (gear == 2)
   {
-    delay(gearboxSettings[gear-1].DownshiftDelay);
+    vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
 
     ledcWrite(pwmChannelsPointer->mpcChannel, (gearboxSettings[gear-1].DownshiftLinePressure /2));
     ledcWrite(pwmChannelsPointer->spcChannel, (gearboxSettings[gear-1].DownshiftShiftPressure /2));
     digitalWrite(gearPin, LOW);
 
-    delay(50);
+    vTaskDelay(50); // delay(50);
   }
   else
   {
-    delay(gearboxSettings[gear-1].DownshiftDelay);
+    vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
   }
 
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  displayHandlerPointer->DisplayOnScreen(screenVarD.c_str());
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
@@ -216,9 +198,8 @@ void ShiftControl::downShift(int customMpcAfterShift)
 void ShiftControl::upShift(int customMpcAfterShift)
 {
   displayHandlerPointer->DisplayOnScreen(" SHIFT");
-  String intToString = String(gear);
-  String screenVarD = "D" + intToString;
-  Serial.println("Upshift to " + screenVarD);
+  String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
+  Serial.println("Upshift to " + screenVar);
 
   int gearPin = -1;
   if (gear == 2 || gear == 5)
@@ -235,13 +216,12 @@ void ShiftControl::upShift(int customMpcAfterShift)
   digitalWrite(gearPin, HIGH);
   digitalWrite(tccPin, gearboxSettings[gear-1].UpshiftTorqueConverterLockup);
 
-  delay(gearboxSettings[gear-1].UpshiftDelay);
+  vTaskDelay(gearboxSettings[gear-1].UpshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  displayHandlerPointer->DisplayOnScreen(screenVarD.c_str());
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
@@ -249,16 +229,15 @@ void ShiftControl::select_fivetcc_to_five()
 // 5 OD -> 5
 {
   displayHandlerPointer->DisplayOnScreen(" SHIFT");
-  Serial.println("Gear 5 -");
+  String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
+  Serial.println("Downshift to " + screenVar);
 
-  delay(400);
+  vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, 15);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
-
-  displayHandlerPointer->DisplayOnScreen("D5");
 
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
@@ -267,16 +246,15 @@ void ShiftControl::select_five_to_fivetcc()
 // 5 -> 5 OD
 {
   displayHandlerPointer->DisplayOnScreen(" SHIFT");
-  Serial.println("Gear 5tcc +");
+  String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
+  Serial.println("Downshift to " + screenVar);
 
-  delay(400);
+  vTaskDelay(gearboxSettings[gear-1].UpshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, 25);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
-
-  displayHandlerPointer->DisplayOnScreen("D5+ ");
 
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }

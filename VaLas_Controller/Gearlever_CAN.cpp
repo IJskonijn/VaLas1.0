@@ -21,7 +21,7 @@
 #include <SPI.h>
 #include <mcp_can.h>
 #include "Gearlever_CAN.h"
-#include "VaLas_Controller.h"
+#include "TaskStructs.h"
 
 int canValue = -1;
 
@@ -50,8 +50,14 @@ Gearlever_CAN::Gearlever_CAN()
   pinMode(CAN_INT, INPUT);
 }
 
-void Gearlever_CAN::ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
+void Gearlever_CAN::ReadGearLever(void * parameter)
 {
+  TaskStructs::GearLeverParameters *parameters = (TaskStructs::GearLeverParameters*) parameter;   
+  VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
+  VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
+  VaLas_Controller::ShiftRequest currentShiftRequest = *(parameters->currentShiftRequestPtr);
+
+  oldLeverPosition = currentLeverPosition;
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
   readCanBus();

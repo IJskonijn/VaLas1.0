@@ -16,7 +16,7 @@ void Outputs::ToggleElrHighIdle()
 {
   // Set pwm signal to mechanical pump ELR pins
 
-  elrToggleState = digitalRead(upShiftPin);
+  elrToggleState = digitalRead(elrTogglePin);
   if ((elrToggleState == 0) && (old_elrToggleState == 1))
   {
     Serial.println("Toggle high idle via PWM");

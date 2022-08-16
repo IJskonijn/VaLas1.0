@@ -7,10 +7,11 @@ class DisplayHandler {
     
 	public:
 		DisplayHandler();
+		void execute(void * parameter);
 		void DisplayStartupOnScreen();
-		void DisplayOnScreen(const char* stringToDisplay);
-        void DisplayOnScreen(const char* stringToDisplay, VaLas_Controller::GearLeverPosition currentLeverPosition, int atfTemp);
+		void DisplayOnScreen(String stringToDisplay);
 		const String ToString(VaLas_Controller::GearLeverPosition v);
+		const String ToString(VaLas_Controller::GearLeverPosition leverPosition, int currentGear);
 		
 	private:
 };

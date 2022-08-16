@@ -1,5 +1,5 @@
 #include "VaLas_Controller.h"
-#include "displayHandler.h"
+#include "DisplayHandler.h"
 
 #ifndef SHIFTCONTROL_H
 #define SHIFTCONTROL_H
@@ -7,6 +7,7 @@
 class ShiftControl {
     
 	public:
+		void execute(void * parameter);
 		void Init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr);
 		void DoTheStuff();
 		

@@ -9,20 +9,27 @@
 
 #include <Arduino.h>
 #include "Gearlever_Modded.h"
-#include "VaLas_Controller.h"
+#include "TaskStructs.h"
 
 int up_shift = 0;
 int down_shift = 0;
 int old_upshift = 0;
 int old_downshift = 0;
 
+
 Gearlever_Modded::Gearlever_Modded()
 {
   Serial.println("Using modded gearlever");
 }
 
-void Gearlever_Modded::ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
+void Gearlever_Modded::ReadGearLever(void * parameter)
 {
+  TaskStructs::GearLeverParameters *parameters = (TaskStructs::GearLeverParameters*) parameter;   
+  VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
+  VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
+  VaLas_Controller::ShiftRequest currentShiftRequest = *(parameters->currentShiftRequestPtr);
+
+  oldLeverPosition = currentLeverPosition;
   readGearLeverPosition(currentLeverPosition);
   readShiftRequest(currentShiftRequest, currentLeverPosition);
 }
@@ -58,11 +65,13 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
     break;
   }
 
-  delay(50);
+  vTaskDelay(50); // delay(50);
 }
 
 void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
 {
+  // Maybe remove this line and wait for ShiftControl to set it back to NoShift.
+  // Only then continue with setting a new shiftrequest
   currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
   // Do nothing if not in Drive
@@ -74,7 +83,7 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentS
   if ((up_shift == 0) && (old_upshift == 1))
   {
     currentShiftRequest = VaLas_Controller::ShiftRequest::UpShift;
-    delay(50);
+    vTaskDelay(50); // delay(50);
     Serial.println("Upshift pressed");
   }
   old_upshift = up_shift;
@@ -84,7 +93,7 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentS
   if ((down_shift == 0) && (old_downshift == 1))
   {
     currentShiftRequest = VaLas_Controller::ShiftRequest::DownShift;
-    delay(50);
+    vTaskDelay(50); // delay(50);
     Serial.println("Downshift pressed");
   }
   old_downshift = down_shift;

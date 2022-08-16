@@ -8,7 +8,7 @@ class Gearlever_Modded : public Gearlever {
     
 	public:
 		Gearlever_Modded();
-        virtual void ReadGearLever(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition);
+        virtual void ReadGearLever(void * parameter);
 		virtual void Reset();
 		
 	private:
