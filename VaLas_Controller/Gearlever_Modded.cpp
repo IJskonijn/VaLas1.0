@@ -70,9 +70,10 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
 
 void Gearlever_Modded::readShiftRequest(VaLas_Controller::ShiftRequest& currentShiftRequest, VaLas_Controller::GearLeverPosition& currentLeverPosition)
 {
-  // Maybe remove this line and wait for ShiftControl to set it back to NoShift.
+  // Wait for ShiftControl to set it back to NoShift.
   // Only then continue with setting a new shiftrequest
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  if (currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
+    return;
 
   // Do nothing if not in Drive
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive)

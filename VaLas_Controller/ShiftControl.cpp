@@ -38,13 +38,6 @@ void ShiftControl::execute(void * parameter)
 
   processLeverValues();
 
-  // Need to rework this, because the leverpositions are now automatically changed in the gearlever class with its own task
-  // while (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
-  // {
-  //   processLeverValues();
-  // }
-  // While stopped, a switch as been pressed while in Drive
-
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
     return; // Nothing to do if there is no shiftrequest 
 
