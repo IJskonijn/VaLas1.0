@@ -160,7 +160,7 @@ void setup()
     (void*) &displayHandlerParameters, // Parameter to pass
     1,               // Task priority
     NULL,            // Task handle
-    1                // Run on Core 0
+    1                // Run on Core 1
   );
 
   // xTaskCreatePinnedToCore(

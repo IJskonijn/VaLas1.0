@@ -9,26 +9,28 @@
 // PIN5 SWITCH PRESSURE PWM 0-255 low=0
 // PIN6 TURBINE LOCK    PWM 0-255 low=0
 
+// https://lastminuteengineers.com/esp32-pinout-reference/
+
 #define upShiftPin 19
 #define downShiftPin 18
 #define gearLeverPotPin 4    // Read potentiometer value to determine if in P, R, N, D
 
-#define y3Pin 33             // 1-2, 4-5 switch    shift      LOW/HIGH
-#define y4Pin 35             // 3-4 switch         shift      LOW/HIGH
-#define y5Pin 37             // 2-3 switch         shift      LOW/HIGH
-#define mpcPin 39            // Line pressure      MOD_PC     min-max 255-0
-#define spcPin 41            // Shift pressure     SHIFT_PC   min-max 255-0
-#define tccPin 43            // Turbine lockup     TCC        min-max 0-255
+#define y3Pin 32             // 1-2, 4-5 switch    shift      LOW/HIGH
+#define y4Pin 33             // 3-4 switch         shift      LOW/HIGH
+#define y5Pin 25             // 2-3 switch         shift      LOW/HIGH
+#define mpcPin 26            // Line pressure      MOD_PC     min-max 255-0
+#define spcPin 27            // Shift pressure     SHIFT_PC   min-max 255-0
+#define tccPin 14            // Turbine lockup     TCC        min-max 0-255
 
-// #define atfTempPin 40        // ATF temp / P-N switch 
-// #define n2Pin 41        // ATF temp / P-N switch 
-// #define n3Pin 42        // ATF temp / P-N switch 
-#define PIN_ATF gpio_num_t::GPIO_NUM_26 // ATF temp sensor and lockout
-#define PIN_N3 gpio_num_t::GPIO_NUM_27 // N3 speed sensor
-#define PIN_N2 gpio_num_t::GPIO_NUM_14 // N3 speed sensor
+// #define atfTempPin 36        // ATF temp / P-N switch 
+// #define n2Pin 39        // ATF temp / P-N switch 
+// #define n3Pin 34        // ATF temp / P-N switch 
+#define PIN_ATF gpio_num_t::GPIO_NUM_36 // ATF temp sensor and lockout
+#define PIN_N2 gpio_num_t::GPIO_NUM_39 // N2 speed sensor
+#define PIN_N3 gpio_num_t::GPIO_NUM_34 // N3 speed sensor
 
-#define elrTogglePin 100
-#define elrPwmPin 101
+#define elrTogglePin 35
+#define elrPwmPin 5
 #define elrPwmFreq 100
 #define elrChannel 20
 
