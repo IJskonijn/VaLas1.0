@@ -15,7 +15,7 @@ VaLas_Controller::ShiftSetting* gearboxSettings;
 
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
-VaLas_Controller::ShiftRequest currentShiftRequest;
+VaLas_Controller::ShiftRequest* currentShiftRequest;
 
 int gear;
 
@@ -35,20 +35,28 @@ void ShiftControl::execute(void * parameter)
   gearboxSettings = parameters->shiftSettings;
   oldLeverPosition = *(parameters->oldLeverPositionPtr);
   currentLeverPosition = *(parameters->currentLeverPositionPtr);
-  currentShiftRequest = *(parameters->currentShiftRequestPtr);
+  currentShiftRequest = parameters->currentShiftRequestPtr;
 
   processLeverValues();
+  // Serial.println("gear " + String(gear));
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
+  // Serial.println("");
 
-  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
+  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || *currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
   {
     Serial.println("No shiftrequest");
     Serial.println("Leverpos: " + String((int)currentLeverPosition));
-    Serial.println("ShiftReq: " + String((int)currentShiftRequest));
+    Serial.println("ShiftReq: " + String((int)*currentShiftRequest));
     return; // Nothing to do if there is no shiftrequest 
   }
 
   // Check for the up_shift
-  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && *currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     Serial.println("Upshift detected");
     if ((gear >= 1) && (gear <= 6))
@@ -71,14 +79,14 @@ void ShiftControl::execute(void * parameter)
         break;
       default:
         gear = 6;
-        currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+        *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
         return;
       }
     }
   }
 
   // check for the down_shift
-  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
+  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && *currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
     Serial.println("Downshift detected");
     if ((gear >= 1) && (gear <= 6))
@@ -101,7 +109,7 @@ void ShiftControl::execute(void * parameter)
           break;
         default:
           gear = 1;
-          currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+          *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
           return;
       }
     }
@@ -125,7 +133,7 @@ void ShiftControl::resetToGear2()
 {
   // Reset all shifting vars
   gearlever->Reset();
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
@@ -192,7 +200,7 @@ void ShiftControl::downShift(int customMpcAfterShift)
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
@@ -223,7 +231,7 @@ void ShiftControl::upShift(int customMpcAfterShift)
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 void ShiftControl::select_fivetcc_to_five()
@@ -240,7 +248,7 @@ void ShiftControl::select_fivetcc_to_five()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 void ShiftControl::select_five_to_fivetcc()
@@ -257,5 +265,5 @@ void ShiftControl::select_five_to_fivetcc()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
 
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
 }
