@@ -65,6 +65,7 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
     break;
   }
 
+  Serial.println("Leverposition updated" + String((int)currentLeverPosition));
   vTaskDelay(50); // delay(50);
 }
 

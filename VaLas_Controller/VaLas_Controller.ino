@@ -31,7 +31,7 @@ VaLas_Controller::PwmChannels pwmChannels;
 //Sensors sensors;
 DisplayHandler displayHandler;
 ShiftControl shiftControl;
-//ShiftConfig shiftConfig; // ook kepot
+ShiftConfig shiftConfig; // ook kepot
 Gearlever* gearLeverInterface;
 
 bool initial_UseCanBus = false;
@@ -123,14 +123,14 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
   
-  //shiftConfig.LoadDefaultConfig(initial_GearboxSettings, initial_UseCanBus);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettings, initial_UseCanBus);
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN();
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  //shiftControl.Init(&displayHandler, &pwmChannels);
+  shiftControl.Init(&displayHandler, &pwmChannels);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
@@ -143,15 +143,15 @@ void setup()
     0                // Run on Core 0
   );
 
-  // xTaskCreatePinnedToCore(
-  //   shiftControlHandlerTask,    // Function that should be called
-  //   "Shiftcontrol Handler",   // Name of the task (for debugging)
-  //   10000,            // Stack size (bytes)
-  //   (void*) &shiftControlParameters, // Parameter to pass
-  //   1,               // Task priority
-  //   NULL,            // Task handle
-  //   0                // Run on Core 0
-  // );
+  xTaskCreatePinnedToCore(
+    shiftControlHandlerTask,    // Function that should be called
+    "Shiftcontrol Handler",   // Name of the task (for debugging)
+    10000,            // Stack size (bytes)
+    (void*) &shiftControlParameters, // Parameter to pass
+    1,               // Task priority
+    NULL,            // Task handle
+    0                // Run on Core 0
+  );
 
   // Core 1 for display and extra stuff
   xTaskCreatePinnedToCore(
@@ -182,12 +182,12 @@ void gearLeverHandlerTask(void* parameter){
   }
 }
 
-// void shiftControlHandlerTask(void* parameter){
-//   for(;;){
-//     shiftControl.execute(parameter);
-//     vTaskDelay(100 / portTICK_PERIOD_MS);
-//   }
-// }
+void shiftControlHandlerTask(void* parameter){
+  for(;;){
+    shiftControl.execute(parameter);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
+}
 
 void displayHandlerTask(void* parameter){
   for(;;){

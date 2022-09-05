@@ -22,12 +22,13 @@ int gear;
 
 void ShiftControl::Init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr)
 {
+  Serial.println("Init ShiftControl");
   displayHandlerPointer = displayHandlerPtr;
   pwmChannelsPointer = pwmChannelsPtr;
 }
 
 void ShiftControl::execute(void * parameter)
-{
+{ 
   TaskStructs::ShiftControlParameters *parameters = (TaskStructs::ShiftControlParameters*) parameter;
   gear = *(parameters->gearPtr);
   gearlever = parameters->gearLeverPtr;
@@ -39,11 +40,17 @@ void ShiftControl::execute(void * parameter)
   processLeverValues();
 
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
+  {
+    Serial.println("No shiftrequest");
+    Serial.println("Leverpos: " + String((int)currentLeverPosition));
+    Serial.println("ShiftReq: " + String((int)currentShiftRequest));
     return; // Nothing to do if there is no shiftrequest 
+  }
 
   // Check for the up_shift
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
+    Serial.println("Upshift detected");
     if ((gear >= 1) && (gear <= 6))
     {
       gear++;
@@ -73,6 +80,7 @@ void ShiftControl::execute(void * parameter)
   // check for the down_shift
   else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
+    Serial.println("Downshift detected");
     if ((gear >= 1) && (gear <= 6))
     {
       gear--;

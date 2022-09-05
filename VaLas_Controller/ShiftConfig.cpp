@@ -12,13 +12,14 @@ bool spiffsMountingSuccess = false;
 
 ShiftConfig::ShiftConfig()
 {
-  SerialBT.begin("VaLas_722.6_Controller");
+  Serial.println("Init ShiftConfig");
+  // SerialBT.begin("VaLas_722.6_Controller");
 
-  if (!SPIFFS.begin(true)) {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-  spiffsMountingSuccess = true;
+  // if (!SPIFFS.begin(true)) {
+  //   Serial.println("An Error has occurred while mounting SPIFFS");
+  //   return;
+  // }
+  // spiffsMountingSuccess = true;
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
