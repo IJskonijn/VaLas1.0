@@ -28,10 +28,10 @@
 int pwmFreq = 1000;
 VaLas_Controller::PwmChannels pwmChannels;
 
-Sensors sensors;
+//Sensors sensors;
 DisplayHandler displayHandler;
 ShiftControl shiftControl;
-ShiftConfig shiftConfig;
+//ShiftConfig shiftConfig; // ook kepot
 Gearlever* gearLeverInterface;
 
 bool initial_UseCanBus = false;
@@ -82,11 +82,18 @@ TaskStructs::DisplayHandlerParameters displayHandlerParameters
 
 void setup()
 {
-  Serial.begin(9600); // open the serial port at 9600 bps:
+  Serial.begin(115200); // open the serial port at 9600 bps:
   Serial.write("Begin program");
   Serial.write("\n");
 
+  displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
+  
+  initial_OldLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
+  initial_CurrentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
+  initial_CurrentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  initial_Gear = 2;
+  initial_AtfTemp = 0;
 
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
@@ -116,20 +123,14 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettings, initial_UseCanBus);
-
-  initial_OldLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
-  initial_CurrentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
-  initial_CurrentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
-  initial_Gear = 2;
-  initial_AtfTemp = 0;
+  //shiftConfig.LoadDefaultConfig(initial_GearboxSettings, initial_UseCanBus);
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN();
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.Init(&displayHandler, &pwmChannels);
+  //shiftControl.Init(&displayHandler, &pwmChannels);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
@@ -142,15 +143,15 @@ void setup()
     0                // Run on Core 0
   );
 
-  xTaskCreatePinnedToCore(
-    shiftControlHandlerTask,    // Function that should be called
-    "Shiftcontrol Handler",   // Name of the task (for debugging)
-    10000,            // Stack size (bytes)
-    (void*) &shiftControlParameters, // Parameter to pass
-    1,               // Task priority
-    NULL,            // Task handle
-    0                // Run on Core 0
-  );
+  // xTaskCreatePinnedToCore(
+  //   shiftControlHandlerTask,    // Function that should be called
+  //   "Shiftcontrol Handler",   // Name of the task (for debugging)
+  //   10000,            // Stack size (bytes)
+  //   (void*) &shiftControlParameters, // Parameter to pass
+  //   1,               // Task priority
+  //   NULL,            // Task handle
+  //   0                // Run on Core 0
+  // );
 
   // Core 1 for display and extra stuff
   xTaskCreatePinnedToCore(
@@ -181,12 +182,12 @@ void gearLeverHandlerTask(void* parameter){
   }
 }
 
-void shiftControlHandlerTask(void* parameter){
-  for(;;){
-    shiftControl.execute(parameter);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-}
+// void shiftControlHandlerTask(void* parameter){
+//   for(;;){
+//     shiftControl.execute(parameter);
+//     vTaskDelay(100 / portTICK_PERIOD_MS);
+//   }
+// }
 
 void displayHandlerTask(void* parameter){
   for(;;){

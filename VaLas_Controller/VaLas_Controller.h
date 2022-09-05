@@ -11,6 +11,12 @@
 
 // https://lastminuteengineers.com/esp32-pinout-reference/
 
+/// Display pins
+#define displayClock = 18;
+#define displayData = 23;
+#define displayCS = 5;
+#define displayReset = 19;
+
 #define upShiftPin 19
 #define downShiftPin 18
 #define gearLeverPotPin 4    // Read potentiometer value to determine if in P, R, N, D

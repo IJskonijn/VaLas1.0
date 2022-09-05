@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <U8g2lib.h>
 #include <SPI.h>
 #include <Wire.h>
 #include "DisplayHandler.h"
@@ -7,10 +6,12 @@
 #include "TaskStructs.h"
 
 // 128x64 for 0.96" OLED
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
-DisplayHandler::DisplayHandler()
+DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
+
+void DisplayHandler::begin()
 {
+  Serial.println("Init displayhandler");
   u8g2.begin();
 }
 
