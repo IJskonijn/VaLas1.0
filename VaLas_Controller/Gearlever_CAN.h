@@ -10,6 +10,7 @@ class Gearlever_CAN : public Gearlever {
 		Gearlever_CAN();
         virtual void ReadGearLever(void * parameter);
 		virtual void Reset();
+		virtual void CompleteShiftRequest();
 		
 	private:
 		void readCanBus();

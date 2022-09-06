@@ -79,7 +79,7 @@ void ShiftControl::execute(void * parameter)
         break;
       default:
         gear = 6;
-        *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+        gearlever->CompleteShiftRequest();
         return;
       }
     }
@@ -109,7 +109,7 @@ void ShiftControl::execute(void * parameter)
           break;
         default:
           gear = 1;
-          *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+          gearlever->CompleteShiftRequest();
           return;
       }
     }
@@ -133,7 +133,7 @@ void ShiftControl::resetToGear2()
 {
   // Reset all shifting vars
   gearlever->Reset();
-  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  gearlever->CompleteShiftRequest();
 
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
@@ -200,7 +200,7 @@ void ShiftControl::downShift(int customMpcAfterShift)
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  gearlever->CompleteShiftRequest();
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
@@ -231,7 +231,7 @@ void ShiftControl::upShift(int customMpcAfterShift)
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 
-  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  gearlever->CompleteShiftRequest();
 }
 
 void ShiftControl::select_fivetcc_to_five()
@@ -248,7 +248,7 @@ void ShiftControl::select_fivetcc_to_five()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
 
-  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  gearlever->CompleteShiftRequest();
 }
 
 void ShiftControl::select_five_to_fivetcc()
@@ -265,5 +265,5 @@ void ShiftControl::select_five_to_fivetcc()
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
 
-  *currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  gearlever->CompleteShiftRequest();
 }

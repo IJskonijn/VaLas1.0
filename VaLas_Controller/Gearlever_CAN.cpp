@@ -25,6 +25,8 @@
 
 int canValue = -1;
 
+VaLas_Controller::ShiftRequest* currentShiftRequestCanValue;
+
 long unsigned int rxId;
 unsigned char len = 0;
 unsigned char rxBuf[8];
@@ -53,34 +55,33 @@ Gearlever_CAN::Gearlever_CAN()
 void Gearlever_CAN::ReadGearLever(void * parameter)
 {
   TaskStructs::GearLeverParameters *parameters = (TaskStructs::GearLeverParameters*) parameter;   
-  VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
-  VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
-  VaLas_Controller::ShiftRequest currentShiftRequest = *(parameters->currentShiftRequestPtr);
+  VaLas_Controller::GearLeverPosition* currentLeverPosition = parameters->currentLeverPositionPtr;
+  VaLas_Controller::GearLeverPosition* oldLeverPosition = parameters->oldLeverPositionPtr;
+  currentShiftRequestCanValue = parameters->currentShiftRequestPtr;
 
-  oldLeverPosition = currentLeverPosition;
-  currentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+  *oldLeverPosition = *currentLeverPosition;
 
   readCanBus();
 
   switch (canValue)
   {
 	case 5:
-		currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
 		break;
 	case 6:
-		currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
+		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
 		break;
 	case 7:
-		currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
+		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
 		break;
 	case 8:
-		currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
+		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
 		break;
 	case 9:
-		currentShiftRequest = VaLas_Controller::ShiftRequest::UpShift;
+		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::UpShift;
 		break;
 	case 10:
-		currentShiftRequest = VaLas_Controller::ShiftRequest::DownShift;
+		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::DownShift;
 		break;
 	
 	default: // I guess something went wrong...
@@ -93,6 +94,11 @@ void Gearlever_CAN::Reset()
   // Not much to do here
   // Maybe clear canValue
   canValue = -1;
+}
+
+void Gearlever_CAN::CompleteShiftRequest()
+{
+  *currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::NoShift;
 }
 
 void Gearlever_CAN::readCanBus()

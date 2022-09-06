@@ -8,6 +8,7 @@ class Gearlever {
 	public:
         virtual void ReadGearLever(void * parameter);
 		virtual void Reset();
+		virtual void CompleteShiftRequest();
 		
 	private:
 };
