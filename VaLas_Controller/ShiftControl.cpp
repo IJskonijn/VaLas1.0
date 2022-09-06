@@ -15,7 +15,7 @@ VaLas_Controller::ShiftSetting* gearboxSettings;
 
 VaLas_Controller::GearLeverPosition oldLeverPosition;
 VaLas_Controller::GearLeverPosition currentLeverPosition;
-VaLas_Controller::ShiftRequest* currentShiftRequest;
+VaLas_Controller::ShiftRequest currentShiftRequest;
 
 int gear;
 
@@ -35,7 +35,7 @@ void ShiftControl::execute(void * parameter)
   gearboxSettings = parameters->shiftSettings;
   oldLeverPosition = *(parameters->oldLeverPositionPtr);
   currentLeverPosition = *(parameters->currentLeverPositionPtr);
-  currentShiftRequest = parameters->currentShiftRequestPtr;
+  currentShiftRequest = *(parameters->currentShiftRequestPtr);
 
   processLeverValues();
   // Serial.println("gear " + String(gear));
@@ -47,16 +47,16 @@ void ShiftControl::execute(void * parameter)
   // Serial.println("");
   // Serial.println("");
 
-  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || *currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
+  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
   {
     Serial.println("No shiftrequest");
     Serial.println("Leverpos: " + String((int)currentLeverPosition));
-    Serial.println("ShiftReq: " + String((int)*currentShiftRequest));
+    Serial.println("ShiftReq: " + String((int)currentShiftRequest));
     return; // Nothing to do if there is no shiftrequest 
   }
 
   // Check for the up_shift
-  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && *currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     Serial.println("Upshift detected");
     if ((gear >= 1) && (gear <= 6))
@@ -86,7 +86,7 @@ void ShiftControl::execute(void * parameter)
   }
 
   // check for the down_shift
-  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && *currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
+  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
     Serial.println("Downshift detected");
     if ((gear >= 1) && (gear <= 6))

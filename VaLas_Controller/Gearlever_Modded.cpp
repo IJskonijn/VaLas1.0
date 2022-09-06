@@ -29,10 +29,6 @@ void Gearlever_Modded::ReadGearLever(void * parameter)
   VaLas_Controller::GearLeverPosition* currentLeverPosition = parameters->currentLeverPositionPtr;
   VaLas_Controller::GearLeverPosition* oldLeverPosition = parameters->oldLeverPositionPtr;
   currentShiftRequestValue = parameters->currentShiftRequestPtr;
-  
-  Serial.println("currentleverpos "+ String((int)currentLeverPosition));
-  Serial.println("oldleverpos "+ String((int)oldLeverPosition));
-  Serial.println("currentshiftreq " + String((int)currentShiftRequestValue));
 
   *oldLeverPosition = *currentLeverPosition;
   readGearLeverPosition(currentLeverPosition);
@@ -56,9 +52,12 @@ void Gearlever_Modded::CompleteShiftRequest()
 void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition* currentLeverPosition)
 {
   int leverValue = analogRead(gearLeverPotPin);
+  vTaskDelay(15);
+  Serial.println("lever sensor val: " + String(leverValue));
+
   switch (leverValue)
   {
-  case 300 ... 600:
+  case 200 ... 600:
     *currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
     break;
   case 1400 ... 2000:
@@ -67,7 +66,7 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
   case 2100 ... 2500:
     *currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
     break;
-  case 3000 ... 3400:
+  case 2900 ... 3400:
     *currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
     break;
   
@@ -75,12 +74,15 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
     break;
   }
 
-  Serial.println("Leverposition updated" + String((int)currentLeverPosition));
-  vTaskDelay(50); // delay(50);
+  Serial.println("Leverposition updated to " + String((int)*currentLeverPosition));
+  //vTaskDelay(50); // delay(50);
 }
 
 void Gearlever_Modded::readShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPosition)
 {
+  Serial.println("readShiftRequest > currentleverpos: " + String((int) *currentLeverPosition ));
+  Serial.println("readShiftRequest > currentshiftreq: " + String((int) *currentShiftRequestValue ));
+
   // Wait for ShiftControl to set it back to NoShift.
   // Only then continue with setting a new shiftrequest
   if (*currentShiftRequestValue != VaLas_Controller::ShiftRequest::NoShift)
@@ -95,7 +97,7 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::GearLeverPosition* cur
   if ((up_shift == 0) && (old_upshift == 1))
   {
     *currentShiftRequestValue = VaLas_Controller::ShiftRequest::UpShift;
-    vTaskDelay(50); // delay(50);
+    //vTaskDelay(50); // delay(50);
     Serial.println("Upshift pressed");
   }
   old_upshift = up_shift;
@@ -105,7 +107,7 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::GearLeverPosition* cur
   if ((down_shift == 0) && (old_downshift == 1))
   {
     *currentShiftRequestValue = VaLas_Controller::ShiftRequest::DownShift;
-    vTaskDelay(50); // delay(50);
+    //vTaskDelay(50); // delay(50);
     Serial.println("Downshift pressed");
   }
   old_downshift = down_shift;
