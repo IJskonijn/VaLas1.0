@@ -7,6 +7,7 @@
 
 // 128x64 for 0.96" OLED
 
+bool isDisplayingCustomVar;
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
 
 void DisplayHandler::begin()
@@ -17,6 +18,9 @@ void DisplayHandler::begin()
 
 void DisplayHandler::execute(void * parameter)
 {
+  if (isDisplayingCustomVar)
+    return;
+
   TaskStructs::DisplayHandlerParameters *parameters = (TaskStructs::DisplayHandlerParameters*) parameter;   
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
   int currentGear = *(parameters->currentGearPtr);
@@ -66,12 +70,15 @@ void DisplayHandler::DisplayStartupOnScreen()
 
 void DisplayHandler::DisplayOnScreen(String stringToDisplay)
 {
+  isDisplayingCustomVar = true;
+
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_logisoso28_tr);
   u8g2.drawStr(1, 29, stringToDisplay.c_str());
   u8g2.sendBuffer();
   
   vTaskDelay(500); // delay(500);
+  isDisplayingCustomVar = false;
 }
 
 const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition)

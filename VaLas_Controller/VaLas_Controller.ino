@@ -56,7 +56,6 @@ TaskStructs::GearLeverParameters gearLeverParameters
 
 TaskStructs::ShiftControlParameters shiftControlParameters
 {
-  gearLeverInterface,
   &initial_Gear,
   &initial_CurrentLeverPosition,
   &initial_OldLeverPosition,
@@ -130,7 +129,7 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.Init(&displayHandler, &pwmChannels);
+  shiftControl.Init(&displayHandler, &pwmChannels, gearLeverInterface);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
@@ -150,7 +149,7 @@ void setup()
     (void*) &shiftControlParameters, // Parameter to pass
     1,               // Task priority
     NULL,            // Task handle
-    0                // Run on Core 0
+    1                // Run on Core 0
   );
 
   // Core 1 for display and extra stuff
@@ -192,7 +191,7 @@ void shiftControlHandlerTask(void* parameter){
 void displayHandlerTask(void* parameter){
   for(;;){
     displayHandler.execute(parameter);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(200 / portTICK_PERIOD_MS);
   }
 }
 

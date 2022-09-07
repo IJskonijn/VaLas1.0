@@ -17,7 +17,6 @@ class TaskStructs {
 
         struct shiftControlParameters
         {
-            Gearlever* gearLeverPtr;
             int* gearPtr;
             VaLas_Controller::GearLeverPosition* currentLeverPositionPtr;
             VaLas_Controller::GearLeverPosition* oldLeverPositionPtr;

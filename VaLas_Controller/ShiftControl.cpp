@@ -20,38 +20,28 @@ VaLas_Controller::ShiftRequest currentShiftRequest;
 int gear;
 
 
-void ShiftControl::Init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr)
+void ShiftControl::Init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr)
 {
   Serial.println("Init ShiftControl");
   displayHandlerPointer = displayHandlerPtr;
   pwmChannelsPointer = pwmChannelsPtr;
+  gearlever = gearLeverPtr;
 }
 
 void ShiftControl::execute(void * parameter)
 { 
   TaskStructs::ShiftControlParameters *parameters = (TaskStructs::ShiftControlParameters*) parameter;
   gear = *(parameters->gearPtr);
-  gearlever = parameters->gearLeverPtr;
   gearboxSettings = parameters->shiftSettings;
   oldLeverPosition = *(parameters->oldLeverPositionPtr);
   currentLeverPosition = *(parameters->currentLeverPositionPtr);
   currentShiftRequest = *(parameters->currentShiftRequestPtr);
 
   processLeverValues();
-  // Serial.println("gear " + String(gear));
-  // Serial.println("");
-  // Serial.println("");
-  // Serial.println("");
-  // Serial.println("");
-  // Serial.println("");
-  // Serial.println("");
-  // Serial.println("");
 
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
   {
     Serial.println("No shiftrequest");
-    Serial.println("Leverpos: " + String((int)currentLeverPosition));
-    Serial.println("ShiftReq: " + String((int)currentShiftRequest));
     return; // Nothing to do if there is no shiftrequest 
   }
 

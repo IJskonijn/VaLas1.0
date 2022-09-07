@@ -25,14 +25,19 @@ Gearlever_Modded::Gearlever_Modded()
 
 void Gearlever_Modded::ReadGearLever(void * parameter)
 {
+  Serial.println("Gearlever Readgearlever");
   TaskStructs::GearLeverParameters *parameters = (TaskStructs::GearLeverParameters*) parameter;   
   VaLas_Controller::GearLeverPosition* currentLeverPosition = parameters->currentLeverPositionPtr;
   VaLas_Controller::GearLeverPosition* oldLeverPosition = parameters->oldLeverPositionPtr;
   currentShiftRequestValue = parameters->currentShiftRequestPtr;
+  
+  Serial.println("Gearlever pointers read");
 
   *oldLeverPosition = *currentLeverPosition;
   readGearLeverPosition(currentLeverPosition);
   readShiftRequest(currentLeverPosition);
+  
+  Serial.println("Gearlever updates done");
 }
 
 void Gearlever_Modded::Reset()
