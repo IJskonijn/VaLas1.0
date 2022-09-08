@@ -22,7 +22,7 @@ ShiftConfig::ShiftConfig()
 
 void ShiftConfig::init()
 {
-  if(!SerialBT.begin("VaLas_722.6_Controller", true))
+  if(!SerialBT.begin("VaLas_722.6_Controller"))
   {
     Serial.println("An error occurred initializing Bluetooth");
     return;
