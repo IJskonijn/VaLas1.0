@@ -8,6 +8,7 @@ class ShiftConfig {
     
 	public:
 		ShiftConfig();
+		void init();
         void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
         void SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
 		void LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);

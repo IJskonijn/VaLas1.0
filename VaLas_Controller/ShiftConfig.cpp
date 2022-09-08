@@ -10,16 +10,32 @@ BluetoothSerial SerialBT;
 String receivedMessage = "";
 bool spiffsMountingSuccess = false;
 
+
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+
 ShiftConfig::ShiftConfig()
 {
   Serial.println("Init ShiftConfig");
-  // SerialBT.begin("VaLas_722.6_Controller");
+}
 
-  // if (!SPIFFS.begin(true)) {
-  //   Serial.println("An Error has occurred while mounting SPIFFS");
-  //   return;
-  // }
-  // spiffsMountingSuccess = true;
+void ShiftConfig::init()
+{
+  if(!SerialBT.begin("VaLas_722.6_Controller", true))
+  {
+    Serial.println("An error occurred initializing Bluetooth");
+    return;
+  }
+
+  if (!SPIFFS.begin(true))
+  {
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+  spiffsMountingSuccess = true;
+
+  vTaskDelay(50);
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)
