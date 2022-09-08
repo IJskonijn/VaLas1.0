@@ -38,6 +38,9 @@ bool initial_UseCanBus = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 
+VaLas_Controller::DisplayScreen initial_screenToDisplay;
+VaLas_Controller::DisplayScreen* initial_screenToDisplayPtr;
+
 VaLas_Controller::GearLeverPosition initial_OldLeverPosition;
 VaLas_Controller::GearLeverPosition initial_CurrentLeverPosition;
 VaLas_Controller::ShiftRequest initial_CurrentShiftRequest;
@@ -56,6 +59,7 @@ TaskStructs::GearLeverParameters gearLeverParameters
 
 TaskStructs::ShiftControlParameters shiftControlParameters
 {
+  initial_screenToDisplayPtr,
   &initial_Gear,
   &initial_CurrentLeverPosition,
   &initial_OldLeverPosition,
@@ -71,6 +75,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
 {
+  initial_screenToDisplayPtr,
   &initial_Gear,
   &initial_CurrentLeverPosition,
   &initial_CurrentShiftRequest,
@@ -88,6 +93,7 @@ void setup()
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
   
+  initial_screenToDisplay = VaLas_Controller::DisplayScreen::Main;
   initial_OldLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   initial_CurrentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   initial_CurrentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
@@ -129,7 +135,7 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.Init(&displayHandler, &pwmChannels, gearLeverInterface);
+  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, initial_screenToDisplayPtr);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(

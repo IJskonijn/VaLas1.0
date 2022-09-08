@@ -59,6 +59,12 @@ class VaLas_Controller {
       DownShift
     };
 
+    enum class DisplayScreen
+    {
+      Main,
+      Shifting
+    };
+
     typedef struct
     {
       int mpcChannel = 0; // Channel 0

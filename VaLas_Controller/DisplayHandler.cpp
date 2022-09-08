@@ -7,7 +7,6 @@
 
 // 128x64 for 0.96" OLED
 
-bool isDisplayingCustomVar;
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
 
 void DisplayHandler::begin()
@@ -18,37 +17,25 @@ void DisplayHandler::begin()
 
 void DisplayHandler::execute(void * parameter)
 {
-  if (isDisplayingCustomVar)
-    return;
-
-  TaskStructs::DisplayHandlerParameters *parameters = (TaskStructs::DisplayHandlerParameters*) parameter;   
+  TaskStructs::DisplayHandlerParameters *parameters = (TaskStructs::DisplayHandlerParameters*) parameter;
+  VaLas_Controller::DisplayScreen screenToDisplay = *(parameters->screenToDisplay);
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
   int currentGear = *(parameters->currentGearPtr);
   int atfTemp = *(parameters->atfTempPtr);
 
-  String atfTempToDisplay = String("-");
-
   u8g2.clearBuffer();
-
-  // Draw gear      
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, ToString(currentLeverPosition, currentGear).c_str());
-
-  // Draw ATF temp
-  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Unknown)
-  {
-    if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Park && currentLeverPosition != VaLas_Controller::GearLeverPosition::Neutral)
-    {
-      if (atfTemp > -1)
-        atfTempToDisplay = String(atfTemp);
-    }
-
-    String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
-    u8g2.setFont(u8g2_font_logisoso18_tr);
-    u8g2.drawStr(10, 65, tempVar.c_str());
+  
+  switch (screenToDisplay){
+    case VaLas_Controller::DisplayScreen::Main:
+      displayMainScreen(currentLeverPosition, currentGear, atfTemp);
+      u8g2.sendBuffer();
+      break;
+    case VaLas_Controller::DisplayScreen::Shifting:
+      displayShifting();
+      u8g2.sendBuffer();
+      vTaskDelay(500);
+      break;
   }
-
-  u8g2.sendBuffer();
 }
 
 void DisplayHandler::DisplayStartupOnScreen()
@@ -68,17 +55,33 @@ void DisplayHandler::DisplayStartupOnScreen()
   vTaskDelay(1500); // delay(1500);
 }
 
-void DisplayHandler::DisplayOnScreen(String stringToDisplay)
+void DisplayHandler::displayMainScreen(VaLas_Controller::GearLeverPosition currentLeverPosition, int currentGear, int atfTemp)
 {
-  isDisplayingCustomVar = true;
+  String atfTempToDisplay = String("-");
 
-  u8g2.clearBuffer();
+  // Draw gear      
   u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, stringToDisplay.c_str());
-  u8g2.sendBuffer();
-  
-  vTaskDelay(500); // delay(500);
-  isDisplayingCustomVar = false;
+  u8g2.drawStr(1, 29, ToString(currentLeverPosition, currentGear).c_str());
+
+  // Draw ATF temp
+  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Unknown)
+  {
+    if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Park && currentLeverPosition != VaLas_Controller::GearLeverPosition::Neutral)
+    {
+      if (atfTemp > -1)
+        atfTempToDisplay = String(atfTemp);
+    }
+
+    String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
+    u8g2.setFont(u8g2_font_logisoso18_tr);
+    u8g2.drawStr(10, 65, tempVar.c_str());
+  }
+}
+
+void DisplayHandler::displayShifting()
+{
+  u8g2.setFont(u8g2_font_logisoso28_tr);
+  u8g2.drawStr(1, 29, " SHIFT");
 }
 
 const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition)
