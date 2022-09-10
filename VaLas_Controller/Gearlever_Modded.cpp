@@ -25,19 +25,14 @@ Gearlever_Modded::Gearlever_Modded()
 
 void Gearlever_Modded::ReadGearLever(void * parameter)
 {
-  Serial.println("Gearlever Readgearlever");
   TaskStructs::GearLeverParameters *parameters = (TaskStructs::GearLeverParameters*) parameter;   
   VaLas_Controller::GearLeverPosition* currentLeverPosition = parameters->currentLeverPositionPtr;
   VaLas_Controller::GearLeverPosition* oldLeverPosition = parameters->oldLeverPositionPtr;
   currentShiftRequestValue = parameters->currentShiftRequestPtr;
-  
-  Serial.println("Gearlever pointers read");
 
   *oldLeverPosition = *currentLeverPosition;
   readGearLeverPosition(currentLeverPosition);
   readShiftRequest(currentLeverPosition);
-  
-  Serial.println("Gearlever updates done");
 }
 
 void Gearlever_Modded::Reset()
@@ -58,7 +53,7 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
 {
   int leverValue = analogRead(gearLeverPotPin);
   vTaskDelay(15);
-  Serial.println("lever sensor val: " + String(leverValue));
+  //Serial.println("lever sensor val: " + String(leverValue));
 
   switch (leverValue)
   {
@@ -79,14 +74,14 @@ void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition
     break;
   }
 
-  Serial.println("Leverposition updated to " + String((int)*currentLeverPosition));
+  //Serial.println("Leverposition updated to " + String((int)*currentLeverPosition));
   //vTaskDelay(50); // delay(50);
 }
 
 void Gearlever_Modded::readShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPosition)
 {
-  Serial.println("readShiftRequest > currentleverpos: " + String((int) *currentLeverPosition ));
-  Serial.println("readShiftRequest > currentshiftreq: " + String((int) *currentShiftRequestValue ));
+  // Serial.println("readShiftRequest > currentleverpos: " + String((int) *currentLeverPosition ));
+  // Serial.println("readShiftRequest > currentshiftreq: " + String((int) *currentShiftRequestValue ));
 
   // Wait for ShiftControl to set it back to NoShift.
   // Only then continue with setting a new shiftrequest

@@ -17,7 +17,6 @@ class TaskStructs {
 
         struct shiftControlParameters
         {
-            VaLas_Controller::DisplayScreen* screenToDisplay;
             int* gearPtr;
             VaLas_Controller::GearLeverPosition* currentLeverPositionPtr;
             VaLas_Controller::GearLeverPosition* oldLeverPositionPtr;
@@ -35,7 +34,7 @@ class TaskStructs {
 
         struct displayHandlerParameters
         {
-            VaLas_Controller::DisplayScreen* screenToDisplay;
+            VaLas_Controller::DisplayScreen* screenToDisplayPtr;
             int* currentGearPtr;
             VaLas_Controller::GearLeverPosition* currentLeverPositionPtr;
             VaLas_Controller::ShiftRequest* currentShiftRequestPtr;

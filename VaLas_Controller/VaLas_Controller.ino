@@ -31,7 +31,7 @@ VaLas_Controller::PwmChannels pwmChannels;
 //Sensors sensors;
 DisplayHandler displayHandler;
 ShiftControl shiftControl;
-ShiftConfig shiftConfig; // ook kepot
+ShiftConfig shiftConfig;
 Gearlever* gearLeverInterface;
 
 bool initial_UseCanBus = false;
@@ -39,7 +39,6 @@ VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
-VaLas_Controller::DisplayScreen* initial_screenToDisplayPtr;
 
 VaLas_Controller::GearLeverPosition initial_OldLeverPosition;
 VaLas_Controller::GearLeverPosition initial_CurrentLeverPosition;
@@ -59,7 +58,6 @@ TaskStructs::GearLeverParameters gearLeverParameters
 
 TaskStructs::ShiftControlParameters shiftControlParameters
 {
-  initial_screenToDisplayPtr,
   &initial_Gear,
   &initial_CurrentLeverPosition,
   &initial_OldLeverPosition,
@@ -75,7 +73,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
 {
-  initial_screenToDisplayPtr,
+  &initial_screenToDisplay,
   &initial_Gear,
   &initial_CurrentLeverPosition,
   &initial_CurrentShiftRequest,
@@ -89,9 +87,6 @@ void setup()
   Serial.begin(115200); // open the serial port at 9600 bps:
   Serial.write("Begin program");
   Serial.write("\n");
-
-  displayHandler.begin();
-  displayHandler.DisplayStartupOnScreen();
   
   initial_screenToDisplay = VaLas_Controller::DisplayScreen::Main;
   initial_OldLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
@@ -100,6 +95,9 @@ void setup()
   initial_Gear = 2;
   initial_AtfTemp = 0;
 
+  displayHandler.begin(&initial_screenToDisplay);
+  displayHandler.DisplayStartupOnScreen();
+  
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
 
@@ -135,7 +133,7 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, initial_screenToDisplayPtr);
+  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(

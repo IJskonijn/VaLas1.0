@@ -8,7 +8,7 @@ class DisplayHandler {
     
 	public:
 		DisplayHandler();
-		void begin();
+		void begin(VaLas_Controller::DisplayScreen* screenToDisplay);
 		void execute(void * parameter);
 		void DisplayStartupOnScreen();
 		const String ToString(VaLas_Controller::GearLeverPosition leverPosition);

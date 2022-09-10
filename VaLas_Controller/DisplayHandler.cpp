@@ -7,25 +7,27 @@
 
 // 128x64 for 0.96" OLED
 
+VaLas_Controller::DisplayScreen* screenToDisplay;
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
 
-void DisplayHandler::begin()
+void DisplayHandler::begin(VaLas_Controller::DisplayScreen* screenToDisplayPtr)
 {
   Serial.println("Init displayhandler");
-  u8g2.begin();
+  u8g2.begin(); 
+  screenToDisplay = screenToDisplayPtr;
 }
 
 void DisplayHandler::execute(void * parameter)
 {
   TaskStructs::DisplayHandlerParameters *parameters = (TaskStructs::DisplayHandlerParameters*) parameter;
-  VaLas_Controller::DisplayScreen screenToDisplay = *(parameters->screenToDisplay);
+  screenToDisplay = parameters->screenToDisplayPtr;
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
   int currentGear = *(parameters->currentGearPtr);
   int atfTemp = *(parameters->atfTempPtr);
 
   u8g2.clearBuffer();
   
-  switch (screenToDisplay){
+  switch (*screenToDisplay){
     case VaLas_Controller::DisplayScreen::Main:
       displayMainScreen(currentLeverPosition, currentGear, atfTemp);
       u8g2.sendBuffer();
