@@ -57,8 +57,9 @@ void DisplayHandler::DisplayStartupOnScreen()
   vTaskDelay(1500); // delay(1500);
 }
 
-void DisplayHandler::displayMainScreen(VaLas_Controller::GearLeverPosition currentLeverPosition, int currentGear, int atfTemp)
+void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition currentLeverPosition, const int currentGear, const int atfTemp)
 {
+  Serial.println("Printing gear on screen: " + currentGear);
   String atfTempToDisplay = String("-");
 
   // Draw gear      
@@ -86,7 +87,7 @@ void DisplayHandler::displayShifting()
   u8g2.drawStr(1, 29, " SHIFT");
 }
 
-const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition)
+const String DisplayHandler::ToString(const VaLas_Controller::GearLeverPosition leverPosition)
 {
   switch (leverPosition)
   {
@@ -98,7 +99,7 @@ const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverP
   }
 }
 
-const String DisplayHandler::ToString(VaLas_Controller::GearLeverPosition leverPosition, int currentGear)
+const String DisplayHandler::ToString(const VaLas_Controller::GearLeverPosition leverPosition, const int currentGear)
 {
   String printVar = ToString(leverPosition);
   String screenVar = "" + printVar.substring(0,1); // Take first character. Example Park would print: P
