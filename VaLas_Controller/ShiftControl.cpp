@@ -15,7 +15,8 @@ VaLas_Controller::DisplayScreen* screenToDisplayValue;
 VaLas_Controller::ShiftSetting* gearboxSettings;
 
 
-void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr, VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr)
+void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr, 
+  VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr)
 {
   Serial.println("Init ShiftControl");
   displayHandlerPointer = displayHandlerPtr;
@@ -28,7 +29,7 @@ void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::Pwm
 void ShiftControl::execute(void * parameter)
 { 
   TaskStructs::ShiftControlParameters *parameters = (TaskStructs::ShiftControlParameters*) parameter;
-  int gear = *(parameters->gearPtr);
+  int* gear = parameters->gearPtr;
   //VaLas_Controller::ShiftSetting* gearboxSettings = parameters->shiftSettings;
   VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
@@ -46,32 +47,34 @@ void ShiftControl::execute(void * parameter)
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     Serial.println("Upshift detected");
-    Serial.println("Current gear before upshift" + gear);
-    if ((gear >= 1) && (gear <= 6))
+    Serial.println("Current gear before upshift" + *gear);
+    if ((*gear >= 1) && (*gear <= 6))
     {
-      gear++;
+      *gear++;
       vTaskDelay(50); // delay(50);
 
-      switch (gear)
+      switch (*gear)
       {
         case 2:
         case 3:
         case 4:
-          upShift(0, currentLeverPosition, gear);
+          upShift(0, currentLeverPosition, *gear);
           break;
         case 5:
-          upShift(15, currentLeverPosition, gear);
+          upShift(15, currentLeverPosition, *gear);
           break;
         case 6:
-          select_five_to_fivetcc(currentLeverPosition, gear);
+          select_five_to_fivetcc(currentLeverPosition, *gear);
           break;
         default:
-          gear = 6;
-          gearlever->CompleteShiftRequest();
+          *gear = 6;
           return;
       }
+
+      gearlever->CompleteShiftRequest();
+      *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
       
-      Serial.println("Current gear after upshift" + gear);
+      Serial.println("Current gear after upshift" + *gear);
     }
   }
 
@@ -79,37 +82,39 @@ void ShiftControl::execute(void * parameter)
   else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
     Serial.println("Downshift detected");
-    Serial.println("Current gear before downshift" + gear);
-    if ((gear >= 1) && (gear <= 6))
+    Serial.println("Current gear before downshift" + *gear);
+    if ((*gear >= 1) && (*gear <= 6))
     {
-      gear--;
+      *gear--;
       vTaskDelay(50); // delay(50);
 
-      switch (gear)
+      switch (*gear)
       {
         case 2:
-          downShift(20, currentLeverPosition, gear);
+          downShift(20, currentLeverPosition, *gear);
           break;
         case 1:
         case 3:
         case 4:
-          downShift(0, currentLeverPosition, gear);
+          downShift(0, currentLeverPosition, *gear);
           break;
         case 5:
-          select_fivetcc_to_five(currentLeverPosition, gear);
+          select_fivetcc_to_five(currentLeverPosition, *gear);
           break;
         default:
-          gear = 1;
-          gearlever->CompleteShiftRequest();
+          *gear = 1;
           return;
       }
+
+      gearlever->CompleteShiftRequest();
+      *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
       
-      Serial.println("Current gear after downshift" + gear);
+      Serial.println("Current gear after downshift" + *gear);
     }
   }
 }
 
-void ShiftControl::processLeverValues(VaLas_Controller::GearLeverPosition oldLeverPosition, VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
+void ShiftControl::processLeverValues(VaLas_Controller::GearLeverPosition oldLeverPosition, VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear)
 {
   if (currentLeverPosition == oldLeverPosition)
     return;
@@ -118,11 +123,11 @@ void ShiftControl::processLeverValues(VaLas_Controller::GearLeverPosition oldLev
   resetToGear2(currentLeverPosition, gear);
 
   // Log and display
-  String printVar = displayHandlerPointer->ToString(currentLeverPosition, gear) + " selected";
+  String printVar = displayHandlerPointer->ToString(currentLeverPosition, *gear) + " selected";
   Serial.println(printVar);
 }
 
-void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
+void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear)
 {
   // Reset all shifting vars
   gearlever->Reset();
@@ -149,7 +154,7 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   
   // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
-    gear = 2;
+    *gear = 2;
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
@@ -192,9 +197,6 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
-
-  gearlever->CompleteShiftRequest();
-  *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
@@ -224,9 +226,6 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
-
-  gearlever->CompleteShiftRequest();
-  *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
 }
 
 void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
@@ -242,9 +241,6 @@ void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition cu
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, 0);
-
-  gearlever->CompleteShiftRequest();
-  *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
 }
 
 void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
@@ -260,7 +256,4 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   digitalWrite(tccPin, HIGH);
-
-  gearlever->CompleteShiftRequest();
-  *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
 }

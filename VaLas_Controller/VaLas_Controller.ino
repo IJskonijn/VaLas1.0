@@ -133,7 +133,7 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, &initial_GearboxSettings);
+  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
