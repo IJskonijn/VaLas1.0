@@ -47,11 +47,12 @@ void ShiftControl::execute(void * parameter)
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     Serial.println("Upshift detected");
-    Serial.println("Current gear before upshift" + *gear);
-    if ((*gear >= 1) && (*gear <= 6))
+    Serial.println("Current gear before upshift " + String(*gear));
+    if ((*gear >= 1) && (*gear <= 5))
     {
-      *gear++;
-      vTaskDelay(50); // delay(50);
+      (*gear)++;
+      //vTaskDelay(50); // delay(50);
+      Serial.println("upshifting to " + String(*gear));
 
       switch (*gear)
       {
@@ -70,23 +71,24 @@ void ShiftControl::execute(void * parameter)
           *gear = 6;
           return;
       }
-
-      gearlever->CompleteShiftRequest();
-      *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
-      
-      Serial.println("Current gear after upshift" + *gear);
     }
+
+    gearlever->CompleteShiftRequest();
+    *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
+    
+    Serial.println("Current gear after upshift" + String(*gear));
   }
 
   // check for the down_shift
   else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
     Serial.println("Downshift detected");
-    Serial.println("Current gear before downshift" + *gear);
-    if ((*gear >= 1) && (*gear <= 6))
+    Serial.println("Current gear before downshift" + String(*gear));
+    if ((*gear >= 2) && (*gear <= 6))
     {
-      *gear--;
-      vTaskDelay(50); // delay(50);
+      (*gear)--;
+      //vTaskDelay(50); // delay(50);
+      Serial.println("downshifting to " + String(*gear));
 
       switch (*gear)
       {
@@ -105,19 +107,22 @@ void ShiftControl::execute(void * parameter)
           *gear = 1;
           return;
       }
-
-      gearlever->CompleteShiftRequest();
-      *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
-      
-      Serial.println("Current gear after downshift" + *gear);
     }
+
+    gearlever->CompleteShiftRequest();
+    *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
+    
+    Serial.println("Current gear after downshift" + String(*gear));
   }
 }
 
 void ShiftControl::processLeverValues(VaLas_Controller::GearLeverPosition oldLeverPosition, VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear)
 {
   if (currentLeverPosition == oldLeverPosition)
+  {
+    Serial.println("Leverpositions not changed, processLeverValues() ended");
     return;
+  }
 
   // Start fresh from gear 2 if needed
   resetToGear2(currentLeverPosition, gear);

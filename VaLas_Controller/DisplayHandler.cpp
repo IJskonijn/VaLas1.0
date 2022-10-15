@@ -27,8 +27,8 @@ void DisplayHandler::execute(void * parameter)
 
   u8g2.clearBuffer();
   
-  Serial.print("Displayhandler execute: currentGear = " + currentGear);
-  Serial.println(" and atfTemp = " + atfTemp);
+  Serial.print("Displayhandler execute: currentGear = " + String(currentGear));
+  Serial.println(" and atfTemp = " + String(atfTemp));
   switch (screenToDisplay){
     case VaLas_Controller::DisplayScreen::Main:
       displayMainScreen(currentLeverPosition, currentGear, atfTemp);
@@ -61,7 +61,7 @@ void DisplayHandler::DisplayStartupOnScreen()
 
 void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition currentLeverPosition, const int currentGear, const int atfTemp)
 {
-  Serial.println("Printing gear on screen: " + currentGear);
+  Serial.println("Printing gear on screen: " + String(currentGear));
   String atfTempToDisplay = String("-");
 
   // Draw gear      
@@ -117,7 +117,7 @@ const String DisplayHandler::ToString(const VaLas_Controller::GearLeverPosition 
     case 2:
     case 3:
     case 4:
-    case 5:  return "" + screenVar + currentGear;
+    case 5:  return "" + screenVar + String(currentGear);
     case 6:  return "D5+";
     default: return "U";
   }
