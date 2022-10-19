@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include "TaskStructs.h"
 #include <BluetoothSerial.h>
 #include "FS.h"
 #include "SPIFFS.h"
@@ -8,7 +9,9 @@
 
 BluetoothSerial SerialBT;
 String receivedMessage = "";
+String message = "";
 bool spiffsMountingSuccess = false;
+bool sentCurrentConfig = false;
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -28,14 +31,59 @@ void ShiftConfig::init()
     return;
   }
 
-  if (!SPIFFS.begin(true))
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-  spiffsMountingSuccess = true;
+  // if (!SPIFFS.begin(true))
+  // {
+  //   Serial.println("An Error has occurred while mounting SPIFFS");
+  //   return;
+  // }
+  // spiffsMountingSuccess = true;
 
   vTaskDelay(50);
+}
+
+void ShiftConfig::execute(void * parameter)
+{
+  TaskStructs::ShiftConfigParameters *parameters = (TaskStructs::ShiftConfigParameters*) parameter;
+  bool* useCanBusPtr = parameters->useCanBusPtr;
+  VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
+  
+  if (SerialBT.available()) // Connected to device
+  {
+    if(!sentCurrentConfig)
+    {
+      // send current config here
+      sentCurrentConfig = true;
+    }
+
+    char incomingChar = SerialBT.read();
+    if (incomingChar != '\n'){
+      message += String(incomingChar);
+    }
+    else{
+      Serial.println("Full received string: " + String(message));
+      test(message);
+      message = "";
+    }
+  }
+
+  vTaskDelay(20);
+}
+
+void ShiftConfig::test(String message){
+
+  // Check received message and control output accordingly
+  if (message =="led_on"){
+    //digitalWrite(ledPin, HIGH);
+    Serial.println("led_on received");
+  }
+  else if (message =="led_off"){
+    //digitalWrite(ledPin, LOW);
+    Serial.println("led_off received");
+  }
+  else {
+    Serial.println("test method failed");
+    Serial.println("received message in test method:" + message);
+  }
 }
 
 void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus)

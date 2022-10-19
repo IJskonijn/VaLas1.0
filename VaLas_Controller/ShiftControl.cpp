@@ -39,7 +39,7 @@ void ShiftControl::execute(void * parameter)
 
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
   {
-    Serial.println("No shiftrequest");
+    //Serial.println("No shiftrequest");
     return; // Nothing to do if there is no shiftrequest 
   }
 
@@ -52,7 +52,7 @@ void ShiftControl::execute(void * parameter)
     {
       (*gear)++;
       //vTaskDelay(50); // delay(50);
-      Serial.println("upshifting to " + String(*gear));
+      Serial.println("Upshifting to " + String(*gear));
 
       switch (*gear)
       {
@@ -88,7 +88,7 @@ void ShiftControl::execute(void * parameter)
     {
       (*gear)--;
       //vTaskDelay(50); // delay(50);
-      Serial.println("downshifting to " + String(*gear));
+      Serial.println("Downshifting to " + String(*gear));
 
       switch (*gear)
       {
@@ -119,10 +119,7 @@ void ShiftControl::execute(void * parameter)
 void ShiftControl::processLeverValues(VaLas_Controller::GearLeverPosition oldLeverPosition, VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear)
 {
   if (currentLeverPosition == oldLeverPosition)
-  {
-    Serial.println("Leverpositions not changed, processLeverValues() ended");
     return;
-  }
 
   // Start fresh from gear 2 if needed
   resetToGear2(currentLeverPosition, gear);

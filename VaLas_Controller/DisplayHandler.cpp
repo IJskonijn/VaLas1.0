@@ -6,15 +6,12 @@
 #include "TaskStructs.h"
 
 // 128x64 for 0.96" OLED
-
-//VaLas_Controller::DisplayScreen* screenToDisplay;
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
 
-void DisplayHandler::begin(VaLas_Controller::DisplayScreen* screenToDisplayPtr)
+void DisplayHandler::begin()
 {
   Serial.println("Init displayhandler");
-  u8g2.begin(); 
-  //screenToDisplay = screenToDisplayPtr;
+  u8g2.begin();
 }
 
 void DisplayHandler::execute(void * parameter)
@@ -27,8 +24,6 @@ void DisplayHandler::execute(void * parameter)
 
   u8g2.clearBuffer();
   
-  Serial.print("Displayhandler execute: currentGear = " + String(currentGear));
-  Serial.println(" and atfTemp = " + String(atfTemp));
   switch (screenToDisplay){
     case VaLas_Controller::DisplayScreen::Main:
       displayMainScreen(currentLeverPosition, currentGear, atfTemp);
@@ -78,6 +73,7 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
     }
 
     String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
+    Serial.println(tempVar);
     u8g2.setFont(u8g2_font_logisoso18_tr);
     u8g2.drawStr(10, 65, tempVar.c_str());
   }

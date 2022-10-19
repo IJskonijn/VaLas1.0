@@ -9,11 +9,13 @@ class ShiftConfig {
 	public:
 		ShiftConfig();
 		void init();
+		void execute(void * parameter);
         void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
         void SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
 		void LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
 		
 	private:
+		void test(String message);
 		bool writeConfigToFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
 		bool loadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
 		void createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6]);

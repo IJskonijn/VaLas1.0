@@ -95,8 +95,10 @@ void setup()
   initial_Gear = 2;
   initial_AtfTemp = 0;
 
-  displayHandler.begin(&initial_screenToDisplay);
+  displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
+
+  shiftConfig.init();
   
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
@@ -167,15 +169,15 @@ void setup()
     1                // Run on Core 1
   );
 
-  // xTaskCreatePinnedToCore(
-  //   shiftConfigHandlerTask,    // Function that should be called
-  //   "Shiftconfig Handler",   // Name of the task (for debugging)
-  //   10000,            // Stack size (bytes)
-  //   (void*) &shiftConfigParameters, // Parameter to pass
-  //   1,               // Task priority
-  //   NULL,            // Task handle
-  //   1                // Run on Core 1
-  // );
+  xTaskCreatePinnedToCore(
+    shiftConfigHandlerTask,    // Function that should be called
+    "Shiftconfig Handler",   // Name of the task (for debugging)
+    10000,            // Stack size (bytes)
+    (void*) &shiftConfigParameters, // Parameter to pass
+    1,               // Task priority
+    NULL,            // Task handle
+    1                // Run on Core 1
+  );
 }
 
 void gearLeverHandlerTask(void* parameter){
@@ -199,12 +201,12 @@ void displayHandlerTask(void* parameter){
   }
 }
 
-// void shiftConfigHandlerTask(void* parameter){
-//   for(;;){
-//     //shiftConfig.execute(parameter);
-//     vTaskDelay(100 / portTICK_PERIOD_MS);
-//   }
-// }
+void shiftConfigHandlerTask(void* parameter){
+  for(;;){
+    shiftConfig.execute(parameter);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
+}
 
 // Everything is handled in tasks.
 void loop(){ }
