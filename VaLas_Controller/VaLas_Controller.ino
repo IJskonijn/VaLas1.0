@@ -128,7 +128,7 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettings, initial_UseCanBus);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus);
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN();

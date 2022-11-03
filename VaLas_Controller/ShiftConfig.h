@@ -10,16 +10,17 @@ class ShiftConfig {
 		ShiftConfig();
 		void init();
 		void execute(void * parameter);
-        void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
-        void SendConfigViaBluetooth(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
-		void LoadDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
+        void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftsettingsptr, bool* usecanbusptr);
+        void SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
+		void LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
 		
 	private:
-		void test(String message);
-		bool writeConfigToFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
-		bool loadConfigFromFile(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
-		void createDefaultConfig(VaLas_Controller::ShiftSetting (&shiftSettings)[6]);
-		void createObjectFromJson(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus, StaticJsonDocument<385> doc);
-		StaticJsonDocument<512> createJsonFromObject(VaLas_Controller::ShiftSetting (&shiftSettings)[6], bool& useCanBus);
+		void test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, String message);
+		String generatedJsonWithApp();
+		bool writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
+		bool loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
+		void createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings);
+		void createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, StaticJsonDocument<2048> doc);
+		StaticJsonDocument<2048> createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
 };
 #endif
