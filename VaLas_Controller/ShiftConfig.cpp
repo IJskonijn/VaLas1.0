@@ -92,7 +92,7 @@ String ShiftConfig::generatedJsonWithApp(){
   return String(json);
 }
 
-void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftsettingsptr, bool* usecanbusptr)
+void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
 {
   // if (SerialBT.available()){
   //   char incomingChar = SerialBT.read();
@@ -116,8 +116,8 @@ void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shif
     return;
   }
 
-  createObjectFromJson(shiftsettingsptr, usecanbusptr, doc);
-  Serial.println("New useCanBus value after reading JSON and converting: " + String(*usecanbusptr));
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, doc);
+  Serial.println("New useCanBus value after reading JSON and converting: " + String(*useCanBusPtr));
 }
 
 void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
@@ -147,27 +147,27 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
 
 
 bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr) {
-  // const char filePath[16] = "/config.json"; 
-  // File file = SPIFFS.open(filePath, "r");
-  // if (!file) {
-  //   Serial.println("Failed to open config file");
-  //   return false;
-  // }
+  const char filePath[16] = "/config.json"; 
+  File file = SPIFFS.open(filePath, "r");
+  if (!file) {
+    Serial.println("Failed to open config file");
+    return false;
+  }
 
-  // StaticJsonDocument<2048> doc;
-  // DeserializationError error = deserializeJson(doc, file);
+  StaticJsonDocument<2048> doc;
+  DeserializationError error = deserializeJson(doc, file);
 
-  // if (error)
-  // {
-  //   Serial.print(F("deserializeJson() failed: "));
-  //   Serial.println(error.f_str());
-  //   return false;
-  // }
+  if (error)
+  {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+    return false;
+  }
 
-  // createObjectFromJson(shiftSettings, useCanBus, doc);
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, doc);
 
-  // file.close();
-  // return true;
+  file.close();
+  return true;
 }
 
 bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr) {  

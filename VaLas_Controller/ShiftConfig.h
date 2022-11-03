@@ -10,7 +10,7 @@ class ShiftConfig {
 		ShiftConfig();
 		void init();
 		void execute(void * parameter);
-        void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftsettingsptr, bool* usecanbusptr);
+        void ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
         void SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
 		void LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr);
 		
