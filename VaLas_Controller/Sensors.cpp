@@ -159,7 +159,15 @@ int Sensors::ReadAtfTemp()
 int Sensors::ReadRpm()
 {  
   // Read stock OM606 rpm sensor here
-  // Calculation: frequency / 144 (flywheel tooth) * 60 = RPM.
+  // Or read stock OM603 rpm sensor here
+  // OM603 Calculation: frequency / 144 (flywheel tooth) * 60 = RPM.
+  // OM606 Calculation: frequency / 6 (flywheel tabs) * 60 = RPM.
+  
+  // If using a 300E rpm gauge, it needs 3 pulses per rpm
+  // If using a 300D rpm gauge, it needs 144 pulses per rpm
+  // OM606 sensor + 300E gauge == frequency / 2?
+
+  //rpmRevs = rpmPulse / config.triggerWheelTeeth / elapsedTime * 1000 * 60;
 
   // if (rpmSpeed)
   //   {
