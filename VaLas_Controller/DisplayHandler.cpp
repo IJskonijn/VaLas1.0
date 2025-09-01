@@ -6,7 +6,18 @@
 #include "TaskStructs.h"
 
 // 128x64 for 0.96" OLED
-DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){}
+// 128x32 for 0.91" OLED
+#ifdef is_096_Oled
+DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){
+  u8g2_y_coordinate = 29;
+  u8g2_selectedFont = u8g2_font_logisoso28_tr;
+}
+#else
+DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE){
+  u8g2_y_coordinate = 32;
+  u8g2_selectedFont = u8g2_font_logisoso30_tr;
+}
+#endif
 
 void DisplayHandler::begin()
 {
@@ -40,18 +51,18 @@ void DisplayHandler::execute(void * parameter)
 void DisplayHandler::DisplayStartupOnScreen()
 {
   u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "VaLas");
+  u8g2.setFont(u8g2_selectedFont);
+  u8g2.drawStr(1, u8g2_y_coordinate, "VaLas");
   u8g2.sendBuffer();
   
-  vTaskDelay(1500); // delay(1500);
+  vTaskDelay(1000); // delay(1500);
 
   u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, "Ver. 1.1");
+  u8g2.setFont(u8g2_selectedFont);
+  u8g2.drawStr(1, u8g2_y_coordinate, "Ver. 1.1");
   u8g2.sendBuffer();
 
-  vTaskDelay(1500); // delay(1500);
+  vTaskDelay(1000); // delay(1500);
 }
 
 void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition currentLeverPosition, const int currentGear, const int atfTemp)
@@ -60,8 +71,8 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
   String atfTempToDisplay = String("-");
 
   // Draw gear      
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, ToString(currentLeverPosition, currentGear).c_str());
+  u8g2.setFont(u8g2_selectedFont);
+  u8g2.drawStr(1, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
 
   // Draw ATF temp
   if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Unknown)
@@ -74,15 +85,23 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
 
     String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
     Serial.println(tempVar);
+
+#ifdef is_096_Oled
     u8g2.setFont(u8g2_font_logisoso18_tr);
     u8g2.drawStr(10, 65, tempVar.c_str());
+#else
+    u8g2.setFont(u8g2_font_logisoso16_tr);
+    int atfWidth = u8g2.getStrWidth(tempVar.c_str());
+    u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
+#endif
+
   }
 }
 
 void DisplayHandler::displayShifting()
 {
-  u8g2.setFont(u8g2_font_logisoso28_tr);
-  u8g2.drawStr(1, 29, " SHIFT");
+  u8g2.setFont(u8g2_selectedFont);
+  u8g2.drawStr(1, u8g2_y_coordinate, " SHIFT");
 }
 
 const String DisplayHandler::ToString(const VaLas_Controller::GearLeverPosition leverPosition)

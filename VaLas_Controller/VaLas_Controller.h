@@ -11,6 +11,9 @@
 
 // https://lastminuteengineers.com/esp32-pinout-reference/
 
+/// Display size
+#define is_096_Oled = false; // true = 128x64, false = 128x32
+
 /// Display pins
 #define displayClock = 18;
 #define displayData = 23;
