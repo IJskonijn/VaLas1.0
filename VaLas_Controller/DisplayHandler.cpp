@@ -7,7 +7,7 @@
 
 // 128x64 for 0.96" OLED
 // 128x32 for 0.91" OLED
-#ifdef is_096_Oled
+#if is_096_Oled
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){
   u8g2_y_coordinate = 29;
   u8g2_selectedFont = u8g2_font_logisoso28_tr;
@@ -21,7 +21,10 @@ DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE){
 
 void DisplayHandler::begin()
 {
+  String is096oled = u8g2_y_coordinate == 29 ? "true" : "false";
   Serial.println("Init displayhandler");
+  Serial.println("Is using 0.96 OLED: " + is096oled);
+  Serial.println("Using display y coordinate: " + String(u8g2_y_coordinate));
   u8g2.begin();
 }
 
@@ -86,7 +89,7 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
     String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
     Serial.println(tempVar);
 
-#ifdef is_096_Oled
+#if is_096_Oled
     u8g2.setFont(u8g2_font_logisoso18_tr);
     u8g2.drawStr(10, 65, tempVar.c_str());
 #else
