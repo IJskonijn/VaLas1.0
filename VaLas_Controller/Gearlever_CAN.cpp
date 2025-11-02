@@ -31,6 +31,38 @@
 // Standard ID: 0x230       DLC: 1  Data: 0x05  ==	5
 // Standard ID: 0x230       DLC: 1  Data: 0x0A  ==	10
 
+
+/*
+// Readout with 5v + esp 3.3v
+0x18	24 = P?
+0x1D	29 = tussen R en P
+0x07	7
+0x0C	12
+0x06	6
+0x0B	11
+0x09	9
+0x05	5
+0x0A	10
+0x08	8
+
+// Kijken naar winter mode, miss meer in array?
+Winter mode (decimaal)
+Printing gear on screen: 2
+ATF: 0
+Buff length: 1
+Shifterpositie: 152
+Shifterpositie: 157
+Shifterpositie: 151
+Shifterpositie: 135
+Shifterpositie: 140
+Shifterpositie: 134
+Shifterpositie: 139
+Shifterpositie: 137
+Shifterpositie: 133
+Shifterpositie: 138
+Shifterpositie: 24
+*/
+
 #include <Arduino.h>
 #include <SPI.h>
 #include <mcp_can.h>
@@ -41,6 +73,7 @@
 int canValue = -1;
 
 VaLas_Controller::ShiftRequest* currentShiftRequestCanValue;
+VaLas_Controller::ShiftRequest* oldShiftRequestCanValue;
 Gearlever_Modded* pedalShiftGearLeverInterface;
 bool usePedalShifters = false;
 
@@ -70,9 +103,6 @@ Gearlever_CAN::Gearlever_CAN(bool* usePedalShiftersPtr)
   
   // Set operation mode to normal so the MCP2515 sends acks to received data.
   CAN.setMode(MCP_NORMAL);
-
-  // Configuring pin for /INT input
-  pinMode(canInt, INPUT);
 }
 
 void Gearlever_CAN::ReadGearLever(void * parameter)
@@ -90,16 +120,16 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
   {
 	case 5:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
-    if (usePedalShifters)
-      *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
+    // if (usePedalShifters)
+    //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
 		break;
 	case 6:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
 		break;
 	case 7:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
-    if (usePedalShifters)
-      *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
+    // if (usePedalShifters)
+    //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
 		break;
 	case 8:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
@@ -131,59 +161,20 @@ void Gearlever_CAN::CompleteShiftRequest()
 void Gearlever_CAN::readCanBus()
 {
   // Do the actual CAN Bus reading here
-  //if(!digitalRead(canInt))                         // If CAN_INT pin is low, read receive buffer
-  //{    
-    // if((rxId & 0x80000000) == 0x80000000)     // Determine if ID is standard (11 bits) or extended (29 bits)
-    //   sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
-    // else
-    //   sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
-  
-    // Serial.print(msgString);
-  
-    // if((rxId & 0x40000000) == 0x40000000){    // Determine if message is a remote request frame.
-    //   sprintf(msgString, " REMOTE REQUEST FRAME");
-    //   Serial.print(msgString);
-    // } else {
-    //   for(byte i = 0; i<len; i++){
-    //     sprintf(msgString, " 0x%.2X", rxBuf[i]);
-    //     Serial.print(msgString);
-    //   }
-    // }
-        
-    // Serial.println();
 
+    CAN.readMsgBuf(&rxId, &len, rxBuf);
 
-    // if (CAN.readMessage(&canMsg) == MCP2515::ERROR_OK)
-    // {
-    // if (canMsg.can_id == 0x00000230) // This is our shifter message  // Or 560? 
-    // {
-    //   canValue = canMsg.data[4]; // Read offset 4 > should contain the shifter position
-    //   // /** Gets gear selector lever position (NAG only) */
-    //   // EWM_230h_WHC get_WHC() const { return (EWM_230h_WHC)(raw >> 56 & 0xf); }
-    // }
+    // for(byte i = 0; i<len; i++){
+    //   sprintf(msgString, " 0x%.2X", rxBuf[i]);
+    //   Serial.println(msgString);
     // }
 
-    Serial.println("ReadCanBus method");
-    // if (CAN_MSGAVAIL == CAN.checkReceive())
-    // {
-      CAN.readMsgBuf(&rxId, &len, rxBuf);
-      Serial.println("Read CanBus buffer");
-      Serial.println("buffer lenght" + String(len));
-
-      for(byte i = 0; i<len; i++){
-        sprintf(msgString, " 0x%.2X", rxBuf[i]);
-        Serial.print(msgString);
-      }
-
-      if (rxId == 0x230) // This is our shifter message
-      {
-        Serial.println("ID 230 msg found");
-        canValue = rxBuf[4]; // Offset 4 bevat shifterpositie
-        Serial.print("Shifterpositie: ");
-        Serial.println(canValue);
-      }
-    //}
+    if (rxId == 0x230) // This is our shifter message
+    {
+      canValue = (int)rxBuf[0]; // Offset 4 bevat shifterpositie
+      Serial.println("Buff length: " + String(len));
+      Serial.println("Shifterpositie: " + String(canValue));
+    }
 
   delay(50);
-  //}
 }
