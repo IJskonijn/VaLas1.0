@@ -34,7 +34,8 @@ ShiftControl shiftControl;
 ShiftConfig shiftConfig;
 Gearlever* gearLeverInterface;
 
-bool initial_UseCanBus = false;
+bool initial_UseCanBus = true; // Default is false
+bool initial_UsePedalShifters = true; // Default is false
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 
@@ -68,6 +69,7 @@ TaskStructs::ShiftControlParameters shiftControlParameters
 TaskStructs::ShiftConfigParameters shiftConfigParameters
 {
   &initial_UseCanBus,
+  &initial_UsePedalShifters,
   initial_GearboxSettingsPtr
 };
 
@@ -128,10 +130,10 @@ void setup()
   ledcAttachPin(elrPwmPin, elrChannel);
   ledcSetup(elrChannel, elrPwmFreq, 8);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters);
 
   if (initial_UseCanBus)
-    gearLeverInterface = new Gearlever_CAN();
+    gearLeverInterface = new Gearlever_CAN(&initial_UsePedalShifters);
   else
     gearLeverInterface = new Gearlever_Modded();
 

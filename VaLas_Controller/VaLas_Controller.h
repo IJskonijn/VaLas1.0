@@ -14,14 +14,16 @@
 /// Display size
 #define is_096_Oled false // true = 128x64, false = 128x32
 
-/// Display pins
-#define displayClock 18
-#define displayData 23
-#define displayCS 5
-#define displayReset 19
+/// Canbus/SPI pins
+#define canInt 2
 
-#define upShiftPin 19
-#define downShiftPin 18
+#define spiClk 18
+#define spiMiso 19
+#define spiMosi 23
+#define spiCso 5
+
+#define upShiftPin 16
+#define downShiftPin 17
 #define gearLeverPotPin 4    // Read potentiometer value to determine if in P, R, N, D
 
 #define y3Pin 32             // 1-2, 4-5 switch    shift      LOW/HIGH

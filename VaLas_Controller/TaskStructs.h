@@ -28,6 +28,7 @@ class TaskStructs {
         struct shiftConfigParameters
         {
             bool* useCanBusPtr;
+            bool* usePedalShiftersPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
