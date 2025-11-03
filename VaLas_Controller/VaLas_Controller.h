@@ -38,6 +38,11 @@
 #define PIN_N2 gpio_num_t::GPIO_NUM_39 // N2 speed sensor
 #define PIN_N3 gpio_num_t::GPIO_NUM_34 // N3 speed sensor
 
+// Engine RPM sensor and gauge output pins
+#define PIN_ENGINE_RPM gpio_num_t::GPIO_NUM_15 // Engine RPM sensor input
+#define PIN_RPM_GAUGE_OUT 2                    // RPM gauge output signal
+#define RPM_GAUGE_CHANNEL 4                    // PWM channel for RPM gauge
+
 #define elrTogglePin 35
 #define elrPwmPin 5
 #define elrPwmFreq 100
@@ -66,6 +71,18 @@ class VaLas_Controller {
     {
       Main,
       Shifting
+    };
+
+    enum class EngineType
+    {
+      OM603,  // 144 flywheel teeth
+      OM606   // 6 flywheel tabs
+    };
+
+    enum class RpmGaugeType
+    {
+      Mercedes300E,  // Needs 3 pulses per RPM
+      Mercedes300D   // Needs 144 pulses per RPM (same as OM603 flywheel)
     };
 
     typedef struct

@@ -41,6 +41,15 @@ class TaskStructs {
             int* atfTempPtr;
         };
         typedef struct displayHandlerParameters DisplayHandlerParameters;
+
+        struct sensorParameters
+        {
+            int* atfTempPtr;
+            int* n2RpmPtr;
+            int* n3RpmPtr;
+            int* calculatedRpmPtr;
+        };
+        typedef struct sensorParameters SensorParameters;
 		
 	private:
 
