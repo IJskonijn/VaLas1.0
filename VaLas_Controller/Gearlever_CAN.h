@@ -7,7 +7,7 @@
 class Gearlever_CAN : public Gearlever {
     
 	public:
-		Gearlever_CAN();
+		Gearlever_CAN(bool* usePedalShiftersPtr);
         virtual void ReadGearLever(void * parameter);
 		virtual void Reset();
 		virtual void CompleteShiftRequest();

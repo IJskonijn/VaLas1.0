@@ -45,6 +45,7 @@ void ShiftConfig::execute(void * parameter)
 {
   TaskStructs::ShiftConfigParameters *parameters = (TaskStructs::ShiftConfigParameters*) parameter;
   bool* useCanBusPtr = parameters->useCanBusPtr;
+  bool* usePedalShiftersPtr = parameters->usePedalShiftersPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
   
   if (SerialBT.available()) // Connected to device
@@ -61,7 +62,7 @@ void ShiftConfig::execute(void * parameter)
     }
     else{
       Serial.println("Full received string: " + String(message));
-      test(gearboxSettingsPtr, useCanBusPtr, message);
+      test(gearboxSettingsPtr, useCanBusPtr, usePedalShiftersPtr, message);
       message = "";
     }
   }
@@ -69,17 +70,17 @@ void ShiftConfig::execute(void * parameter)
   vTaskDelay(20);
 }
 
-void ShiftConfig::test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, String message)
+void ShiftConfig::test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, String message)
 {
   message.toLowerCase();
   message.trim();
 
   // Check received message and control output accordingly
   if (message == "receiveconfigfrommobiledevice"){
-    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr);
+    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
   }
   else if (message == "sendconfigtomobiledevice"){
-    SendConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr);
+    SendConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
   }
   else {
     Serial.println("test method failed");
@@ -88,11 +89,11 @@ void ShiftConfig::test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* u
 }
 
 String ShiftConfig::generatedJsonWithApp(){
-  char json[] = "{\"UseCanBus\":true,\"GearShiftSettings\":[{\"Name\":\"D1\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D2\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D3\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D4\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\\u002B\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0}]}";
+  char json[] = "{\"UseCanBus\":true,\"UsePedalShifters\":true,\"GearShiftSettings\":[{\"Name\":\"D1\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D2\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D3\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D4\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\\u002B\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0}]}";
   return String(json);
 }
 
-void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
+void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
 {
   // if (SerialBT.available()){
   //   char incomingChar = SerialBT.read();
@@ -116,28 +117,30 @@ void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shif
     return;
   }
 
-  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, doc);
-  Serial.println("New useCanBus value after reading JSON and converting: " + String(*useCanBusPtr));
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, doc);
+  Serial.println("New useCanBus value after reading JSON.");
+  Serial.println("Converting UseCanBus: " + String(*useCanBusPtr));
+  Serial.println("Converting UsePedalShifters: " + String(*usePedalShiftersPtr));
 }
 
-void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
+void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
 {
-  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr);
+  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
 
   // serialize the array and send the result to Serial Bluetooth
   serializeJson(doc, SerialBT);
 }
 
-void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
+void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
 {
   if (spiffsMountingSuccess)
   {
-    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr);
+    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
     if (isLoadedFromFile)
       return;
 
     createDefaultConfig(shiftSettingsPtr);
-    writeConfigToFile(shiftSettingsPtr, useCanBusPtr);
+    writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
   }
   else
   {
@@ -146,7 +149,7 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
 }
 
 
-bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr) {
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr) {
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
   if (!file) {
@@ -164,20 +167,20 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
     return false;
   }
 
-  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, doc);
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, doc);
 
   file.close();
   return true;
 }
 
-bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr) {  
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr) {  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
   if (!file) {    
     return false;
   }
   
-  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr);
+  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
 
   if (serializeJson(doc, file) == 0) {
     file.close();
@@ -188,10 +191,11 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   return true;
 }
 
-StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr)
+StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
 {
   StaticJsonDocument<2048> doc;
   doc["UseCanBus"] = *useCanBusPtr;
+  doc["UsePedalShifters"] = *usePedalShiftersPtr;
   JsonArray GearShiftSettings = doc.createNestedArray("GearShiftSettings");
 
   // add some values
@@ -213,10 +217,11 @@ StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
   return doc;
 }
 
-void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, StaticJsonDocument<2048> doc)
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, StaticJsonDocument<2048> doc)
 {
   // extract the values
   *useCanBusPtr = doc["UseCanBus"].as<bool>();
+  *usePedalShiftersPtr = doc["UsePedalShifters"].as<bool>();
   for (int i = 0; i < 6; i++)
   {
     shiftSettingsPtr[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();

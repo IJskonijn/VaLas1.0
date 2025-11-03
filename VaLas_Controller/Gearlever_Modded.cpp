@@ -49,8 +49,23 @@ void Gearlever_Modded::CompleteShiftRequest()
   *currentShiftRequestValue = VaLas_Controller::ShiftRequest::NoShift;
 }
 
+// Used by Gearlever_CAN to read pedal shifters
+VaLas_Controller::ShiftRequest Gearlever_Modded::GetShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPositionPtr)
+{
+  //Reset first?
+  //CompleteShiftRequest();
+
+  readShiftRequest(currentLeverPositionPtr);
+
+  return *currentShiftRequestValue;
+}
+
 void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition* currentLeverPosition)
 {
+  //Test
+  *currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+  return;
+
   int leverValue = analogRead(gearLeverPotPin);
   vTaskDelay(15);
   //Serial.println("lever sensor val: " + String(leverValue));
