@@ -119,25 +119,32 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
   switch (canValue)
   {
 	case 5:
+	case 133:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
     // if (usePedalShifters)
     //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
 		break;
 	case 6:
+	case 134:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
 		break;
 	case 7:
+	case 135:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
     // if (usePedalShifters)
     //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
 		break;
 	case 8:
+	case 24:
+	case 152:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Park;
 		break;
 	case 9:
+	case 137:
 		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::UpShift;
 		break;
 	case 10:
+	case 138:
 		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::DownShift;
 		break;
 	
