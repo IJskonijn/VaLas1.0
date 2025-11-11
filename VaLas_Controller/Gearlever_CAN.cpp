@@ -71,6 +71,7 @@ Shifterpositie: 24
 #include "Gearlever_Modded.h"
 
 int canValue = -1;
+int oldShiftRequestCanValue = -1;
 
 VaLas_Controller::ShiftRequest* currentShiftRequestCanValue;
 VaLas_Controller::ShiftRequest* oldShiftRequestCanValue;
@@ -113,6 +114,7 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
   currentShiftRequestCanValue = parameters->currentShiftRequestPtr;
 
   *oldLeverPosition = *currentLeverPosition;
+  oldShiftRequestCanValue = canValue;
 
   readCanBus();
   
@@ -141,11 +143,21 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
 		break;
 	case 9:
 	case 137:
-		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::UpShift;
+		// Only trigger upshift on transition (button press, not hold)
+		if (oldShiftRequestCanValue != canValue)
+		{
+			*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::UpShift;
+			Serial.println("Upshift pressed");
+		}
 		break;
 	case 10:
 	case 138:
-		*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::DownShift;
+		// Only trigger downshift on transition (button press, not hold)
+		if (oldShiftRequestCanValue != canValue)
+		{
+			*currentShiftRequestCanValue = VaLas_Controller::ShiftRequest::DownShift;
+			Serial.println("Downshift pressed");
+		}
 		break;
 	
 	default: // I guess something went wrong...
@@ -158,6 +170,7 @@ void Gearlever_CAN::Reset()
   // Not much to do here
   // Maybe clear canValue
   canValue = -1;
+  oldShiftRequestCanValue = -1;
 }
 
 void Gearlever_CAN::CompleteShiftRequest()
