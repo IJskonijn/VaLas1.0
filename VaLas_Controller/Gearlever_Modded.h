@@ -13,7 +13,7 @@ class Gearlever_Modded : public Gearlever {
 		virtual void CompleteShiftRequest();
 
 		// Used by Gearlever_CAN to read pedal shifters
-		VaLas_Controller::ShiftRequest GetShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPositionPtr);
+		VaLas_Controller::ShiftRequest GetShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPositionPtr, VaLas_Controller::ShiftRequest* currentShiftRequestPtr);
 		
 	private:
 		void readGearLeverPosition(VaLas_Controller::GearLeverPosition* currentLeverPosition);

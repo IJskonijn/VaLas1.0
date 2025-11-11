@@ -50,10 +50,10 @@ void Gearlever_Modded::CompleteShiftRequest()
 }
 
 // Used by Gearlever_CAN to read pedal shifters
-VaLas_Controller::ShiftRequest Gearlever_Modded::GetShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPositionPtr)
+VaLas_Controller::ShiftRequest Gearlever_Modded::GetShiftRequest(VaLas_Controller::GearLeverPosition* currentLeverPositionPtr, VaLas_Controller::ShiftRequest* currentShiftRequestPtr)
 {
-  //Reset first?
-  //CompleteShiftRequest();
+  // Initialize the pointer for this call
+  currentShiftRequestValue = currentShiftRequestPtr;
 
   readShiftRequest(currentLeverPositionPtr);
 

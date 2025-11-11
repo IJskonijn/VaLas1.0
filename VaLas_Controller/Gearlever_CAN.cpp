@@ -123,8 +123,8 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
 	case 5:
 	case 133:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
-    // if (usePedalShifters)
-    //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
+    if (usePedalShifters)
+      *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition, currentShiftRequestCanValue);
 		break;
 	case 6:
 	case 134:
@@ -133,8 +133,8 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
 	case 7:
 	case 135:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
-    // if (usePedalShifters)
-    //   *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition);
+    if (usePedalShifters)
+      *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition, currentShiftRequestCanValue);
 		break;
 	case 8:
 	case 24:
