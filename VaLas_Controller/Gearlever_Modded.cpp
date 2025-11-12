@@ -103,8 +103,8 @@ void Gearlever_Modded::readShiftRequest(VaLas_Controller::GearLeverPosition* cur
   if (*currentShiftRequestValue != VaLas_Controller::ShiftRequest::NoShift)
     return;
 
-  // Do nothing if not in Drive
-  if (*currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || *currentLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
+  // Do nothing if not in Drive or Reverse
+  if (*currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && *currentLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
     return;
 
   // check ShiftRequest::UpShift transition
