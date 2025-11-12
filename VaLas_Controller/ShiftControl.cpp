@@ -37,13 +37,15 @@ void ShiftControl::execute(void * parameter)
 
   processLeverValues(oldLeverPosition, currentLeverPosition, gear);
 
-  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
+  // Only process shift requests in Drive or Reverse
+  if ((currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentLeverPosition != VaLas_Controller::GearLeverPosition::Reverse) 
+      || currentShiftRequest == VaLas_Controller::ShiftRequest::NoShift)
   {
     //Serial.println("No shiftrequest");
     return; // Nothing to do if there is no shiftrequest 
   }
 
-  // Check for the up_shift
+  // Check for the up_shift in Drive
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
     Serial.println("Upshift detected");
@@ -113,6 +115,48 @@ void ShiftControl::execute(void * parameter)
     *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
     
     Serial.println("Current gear after downshift" + String(*gear));
+  }
+
+  // Check for upshift in Reverse (R1 -> R2)
+  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
+  {
+    Serial.println("Reverse upshift detected");
+    Serial.println("Current gear before upshift " + String(*gear));
+    
+    if (*gear == 1)
+    {
+      *gear = 2;
+      Serial.println("Upshifting to R2");
+      
+      // R1 -> R2 uses same shift as forward 1->2
+      upShift(0, currentLeverPosition, *gear);
+      
+      Serial.println("Current gear after upshift " + String(*gear));
+    }
+
+    gearlever->CompleteShiftRequest();
+    *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
+  }
+
+  // Check for downshift in Reverse (R2 -> R1)
+  else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
+  {
+    Serial.println("Reverse downshift detected");
+    Serial.println("Current gear before downshift " + String(*gear));
+    
+    if (*gear == 2)
+    {
+      *gear = 1;
+      Serial.println("Downshifting to R1");
+      
+      // R2 -> R1 uses same shift as forward 2->1
+      downShift(20, currentLeverPosition, *gear);
+      
+      Serial.println("Current gear after downshift " + String(*gear));
+    }
+
+    gearlever->CompleteShiftRequest();
+    *screenToDisplayValue = VaLas_Controller::DisplayScreen::Main;
   }
 }
 
