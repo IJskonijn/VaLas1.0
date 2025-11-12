@@ -74,7 +74,6 @@ int canValue = -1;
 int oldShiftRequestCanValue = -1;
 
 VaLas_Controller::ShiftRequest* currentShiftRequestCanValue;
-VaLas_Controller::ShiftRequest* oldShiftRequestCanValue;
 Gearlever_Modded* pedalShiftGearLeverInterface;
 bool usePedalShifters = false;
 
@@ -124,7 +123,10 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
 	case 133:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
     if (usePedalShifters)
+    {
+			Serial.println("usePedalShifters true, reading pedals");
       *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition, currentShiftRequestCanValue);
+    }
 		break;
 	case 6:
 	case 134:
@@ -134,7 +136,10 @@ void Gearlever_CAN::ReadGearLever(void * parameter)
 	case 135:
 		*currentLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
     if (usePedalShifters)
+    {
+			Serial.println("usePedalShifters true, reading pedals");
       *currentShiftRequestCanValue = pedalShiftGearLeverInterface->GetShiftRequest(currentLeverPosition, currentShiftRequestCanValue);
+    }
 		break;
 	case 8:
 	case 24:
