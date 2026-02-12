@@ -187,10 +187,11 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
     ledcWrite(pwmChannelsPointer->y4Channel, (255/100*30)); //30%, Back to idle
 
     // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
-    if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
-      ledcWrite(pwmChannelsPointer->y4Channel, 255);
-    else
-      ledcWrite(pwmChannelsPointer->y4Channel, 0);
+    // New info, 3-4 solenoid is not actually pulsing in original EGS
+    // if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
+    //   ledcWrite(pwmChannelsPointer->y4Channel, 255);
+    // else
+    //   ledcWrite(pwmChannelsPointer->y4Channel, 0);
   }
   else
   {
@@ -286,7 +287,7 @@ void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition cu
   ledcWrite(pwmChannelsPointer->mpcChannel, 15);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, 0);
+  ledcWrite(pwmChannelsPointer->tccChannel, 0);
 }
 
 void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
@@ -301,5 +302,5 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
   ledcWrite(pwmChannelsPointer->mpcChannel, 25);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
-  digitalWrite(tccPin, HIGH);
+  ledcWrite(pwmChannelsPointer->tccChannel, (255/100*95)); //95% for torque converter lockup with some slip for comfort
 }
