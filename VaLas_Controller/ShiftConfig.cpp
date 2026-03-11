@@ -12,6 +12,10 @@ String receivedMessage = "";
 String message = "";
 bool spiffsMountingSuccess = false;
 bool sentCurrentConfig = false;
+const size_t kMaxMessageLength = 2048;
+bool wasBtConnected = false;
+const char* kFramePrefix = "LEN:";
+const char* kCrcPrefix = "CRC:";
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -48,19 +52,49 @@ void ShiftConfig::execute(void * parameter)
   bool* usePedalShiftersPtr = parameters->usePedalShiftersPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
   
-  if (SerialBT.available()) // Connected to device
+  bool isConnected = SerialBT.hasClient();
+  if (!isConnected)
   {
-    if(!sentCurrentConfig)
+    if (wasBtConnected)
     {
-      // send current config here
-      sentCurrentConfig = true;
+      sentCurrentConfig = false;
+      message = "";
     }
+    wasBtConnected = false;
+    vTaskDelay(20);
+    return;
+  }
 
+  if (!wasBtConnected)
+  {
+    sentCurrentConfig = false;
+  }
+  wasBtConnected = true;
+
+  if(!sentCurrentConfig)
+  {
+    SendConfigViaBluetooth(gearboxSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
+    sentCurrentConfig = true;
+  }
+
+  while (SerialBT.available())
+  {
     char incomingChar = SerialBT.read();
-    if (incomingChar != '\n'){
-      message += String(incomingChar);
+    if (incomingChar == '\r')
+      continue;
+
+    if (incomingChar != '\n')
+    {
+      if (message.length() < kMaxMessageLength)
+        message += String(incomingChar);
+      else
+      {
+        Serial.println("Bluetooth message too long; clearing buffer");
+        message = "";
+      }
     }
-    else{
+    else
+    {
       Serial.println("Full received string: " + String(message));
       test(gearboxSettingsPtr, useCanBusPtr, usePedalShiftersPtr, message);
       message = "";
@@ -76,8 +110,18 @@ void ShiftConfig::test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* u
   message.trim();
 
   // Check received message and control output accordingly
-  if (message == "receiveconfigfrommobiledevice"){
-    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
+  String jsonPayload = "";
+  if (tryParseFramedPayload(message, jsonPayload))
+  {
+    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, jsonPayload);
+  }
+  else if (message.startsWith("{"))
+  {
+    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, message);
+  }
+  else if (message == "receiveconfigfrommobiledevice"){
+    // Expect a JSON payload in a subsequent message
+    Serial.println("Waiting for JSON payload...");
   }
   else if (message == "sendconfigtomobiledevice"){
     SendConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
@@ -93,18 +137,9 @@ String ShiftConfig::generatedJsonWithApp(){
   return String(json);
 }
 
-void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
+void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, const String& payload)
 {
-  // if (SerialBT.available()){
-  //   char incomingChar = SerialBT.read();
-  //   if (incomingChar != '\n'){
-  //     receivedMessage += String(incomingChar);
-  //   }
-  //   else{
-  //     receivedMessage = "";
-  //   }
-  // }
-  receivedMessage = generatedJsonWithApp();
+  receivedMessage = payload;
   Serial.println(receivedMessage);
   
   StaticJsonDocument<2048> doc;
@@ -127,8 +162,15 @@ void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSe
 {
   StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
 
-  // serialize the array and send the result to Serial Bluetooth
-  serializeJson(doc, SerialBT);
+  String payload;
+  serializeJson(doc, payload);
+
+  uint16_t crc = calculateCrc16(payload);
+  String framed = String(kFramePrefix) + String(payload.length()) + ";" +
+                  String(kCrcPrefix) + String(crc, HEX) + ";" + payload;
+
+  SerialBT.print(framed);
+  SerialBT.print('\n');
 }
 
 void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
@@ -199,9 +241,9 @@ StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
   JsonArray GearShiftSettings = doc.createNestedArray("GearShiftSettings");
 
   // add some values
-  VaLas_Controller::ShiftSetting (shiftSettings)[6] = *shiftSettingsPtr;
-  for(VaLas_Controller::ShiftSetting setting : shiftSettings)
+  for (int i = 0; i < 6; i++)
   {
+    VaLas_Controller::ShiftSetting setting = shiftSettingsPtr[i];
     JsonObject shiftSetting = GearShiftSettings.createNestedObject();
     shiftSetting["Name"] = setting.Name;
     shiftSetting["UpshiftDelay"] = setting.UpshiftDelay;
@@ -234,6 +276,66 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
     shiftSettingsPtr[i].DownshiftShiftPressure = doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>();
     shiftSettingsPtr[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
   }
+}
+
+uint16_t ShiftConfig::calculateCrc16(const String& data)
+{
+  uint16_t crc = 0xFFFF;
+  for (size_t i = 0; i < data.length(); i++)
+  {
+    crc ^= static_cast<uint8_t>(data[i]);
+    for (int bit = 0; bit < 8; bit++)
+    {
+      if (crc & 0x0001)
+        crc = (crc >> 1) ^ 0xA001;
+      else
+        crc >>= 1;
+    }
+  }
+
+  return crc;
+}
+
+bool ShiftConfig::tryParseFramedPayload(const String& message, String& jsonOut)
+{
+  if (!message.startsWith(kFramePrefix))
+    return false;
+
+  int lenSep = message.indexOf(';');
+  if (lenSep <= 0)
+    return false;
+
+  String lenPart = message.substring(strlen(kFramePrefix), lenSep);
+  int expectedLen = lenPart.toInt();
+  if (expectedLen <= 0)
+    return false;
+
+  int crcPos = message.indexOf(kCrcPrefix, lenSep + 1);
+  if (crcPos < 0)
+    return false;
+
+  int crcSep = message.indexOf(';', crcPos);
+  if (crcSep < 0)
+    return false;
+
+  String crcPart = message.substring(crcPos + strlen(kCrcPrefix), crcSep);
+  uint16_t expectedCrc = static_cast<uint16_t>(strtoul(crcPart.c_str(), nullptr, 16));
+
+  jsonOut = message.substring(crcSep + 1);
+  if (jsonOut.length() != static_cast<size_t>(expectedLen))
+  {
+    Serial.println("Frame length mismatch");
+    return false;
+  }
+
+  uint16_t actualCrc = calculateCrc16(jsonOut);
+  if (actualCrc != expectedCrc)
+  {
+    Serial.println("Frame CRC mismatch");
+    return false;
+  }
+
+  return true;
 }
 
 void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings)
