@@ -386,7 +386,7 @@ void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   // Downshift = 4 > 3
   shiftSettings[3].Name = "D4";
   shiftSettings[3].UpshiftDelay = 600;
-  shiftSettings[3].UpshiftLinePressure = 120;
+  shiftSettings[3].UpshiftLinePressure = 100; // was 120, now 100 to match original code
   shiftSettings[3].UpshiftShiftPressure = 120;
   shiftSettings[3].UpshiftTorqueConverterLockup = 0;
   shiftSettings[3].DownshiftDelay = 600;
