@@ -1,26 +1,29 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "TaskStructs.h"
-#include <BluetoothSerial.h>
 #include "FS.h"
 #include "SPIFFS.h"
 #include "ShiftConfig.h"
 #include "VaLas_Controller.h"
+#include <WiFi.h>
+#include <ESP32WebServer.h>
 
-BluetoothSerial SerialBT;
-String receivedMessage = "";
-String message = "";
 bool spiffsMountingSuccess = false;
-bool sentCurrentConfig = false;
-const size_t kMaxMessageLength = 2048;
-bool wasBtConnected = false;
-const char* kFramePrefix = "LEN:";
-const char* kCrcPrefix = "CRC:";
 
+// ----- WiFi / Web server configuration -----
+const char* kApSsid = "VaLas_722.6_Controller";
+const char* kApPassword = "12345678";
 
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-#endif
+ESP32WebServer webServer(80);
+bool webServerInitialized = false;
+
+// Pointers to the live configuration used by the rest of the system.
+static VaLas_Controller::ShiftSetting* g_shiftSettingsPtr = nullptr;
+static bool* g_useCanBusPtr = nullptr;
+static bool* g_usePedalShiftersPtr = nullptr;
+
+static void handleRoot();
+static void handleSave();
 
 ShiftConfig::ShiftConfig()
 {
@@ -29,18 +32,27 @@ ShiftConfig::ShiftConfig()
 
 void ShiftConfig::init()
 {
-  if(!SerialBT.begin("VaLas_722.6_Controller"))
+  if (!SPIFFS.begin(true))
   {
-    Serial.println("An error occurred initializing Bluetooth");
-    return;
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    spiffsMountingSuccess = false;
+  }
+  else
+  {
+    spiffsMountingSuccess = true;
   }
 
-  // if (!SPIFFS.begin(true))
-  // {
-  //   Serial.println("An Error has occurred while mounting SPIFFS");
-  //   return;
-  // }
-  // spiffsMountingSuccess = true;
+  WiFi.mode(WIFI_AP);
+  if (WiFi.softAP(kApSsid, kApPassword))
+  {
+    Serial.print("WiFi AP started. Connect to SSID: ");
+    Serial.println(kApSsid);
+    Serial.println("IP address: " + WiFi.softAPIP().toString());
+  }
+  else
+  {
+    Serial.println("Failed to start WiFi AP");
+  }
 
   vTaskDelay(50);
 }
@@ -51,126 +63,24 @@ void ShiftConfig::execute(void * parameter)
   bool* useCanBusPtr = parameters->useCanBusPtr;
   bool* usePedalShiftersPtr = parameters->usePedalShiftersPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
-  
-  bool isConnected = SerialBT.hasClient();
-  if (!isConnected)
+
+  if (!webServerInitialized)
   {
-    if (wasBtConnected)
-    {
-      sentCurrentConfig = false;
-      message = "";
-    }
-    wasBtConnected = false;
-    vTaskDelay(20);
-    return;
+    g_shiftSettingsPtr = gearboxSettingsPtr;
+    g_useCanBusPtr = useCanBusPtr;
+    g_usePedalShiftersPtr = usePedalShiftersPtr;
+
+    webServer.on("/", HTTP_GET, handleRoot);
+    webServer.on("/save", HTTP_POST, handleSave);
+    webServer.begin();
+    webServerInitialized = true;
+
+    Serial.println("ShiftConfig web server started. Open http://" + WiFi.softAPIP().toString() + "/");
   }
 
-  if (!wasBtConnected)
-  {
-    sentCurrentConfig = false;
-  }
-  wasBtConnected = true;
-
-  if(!sentCurrentConfig)
-  {
-    SendConfigViaBluetooth(gearboxSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
-    sentCurrentConfig = true;
-  }
-
-  while (SerialBT.available())
-  {
-    char incomingChar = SerialBT.read();
-    if (incomingChar == '\r')
-      continue;
-
-    if (incomingChar != '\n')
-    {
-      if (message.length() < kMaxMessageLength)
-        message += String(incomingChar);
-      else
-      {
-        Serial.println("Bluetooth message too long; clearing buffer");
-        message = "";
-      }
-    }
-    else
-    {
-      Serial.println("Full received string: " + String(message));
-      test(gearboxSettingsPtr, useCanBusPtr, usePedalShiftersPtr, message);
-      message = "";
-    }
-  }
+  webServer.handleClient();
 
   vTaskDelay(20);
-}
-
-void ShiftConfig::test(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, String message)
-{
-  message.toLowerCase();
-  message.trim();
-
-  // Check received message and control output accordingly
-  String jsonPayload = "";
-  if (tryParseFramedPayload(message, jsonPayload))
-  {
-    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, jsonPayload);
-  }
-  else if (message.startsWith("{"))
-  {
-    ReceiveConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, message);
-  }
-  else if (message == "receiveconfigfrommobiledevice"){
-    // Expect a JSON payload in a subsequent message
-    Serial.println("Waiting for JSON payload...");
-  }
-  else if (message == "sendconfigtomobiledevice"){
-    SendConfigViaBluetooth(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
-  }
-  else {
-    Serial.println("test method failed");
-    Serial.println("received message in test method:" + message);
-  }
-}
-
-String ShiftConfig::generatedJsonWithApp(){
-  char json[] = "{\"UseCanBus\":true,\"UsePedalShifters\":true,\"GearShiftSettings\":[{\"Name\":\"D1\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D2\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D3\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D4\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0},{\"Name\":\"D5\\u002B\",\"UpshiftDelay\":600,\"UpshiftLinePressure\":0,\"UpshiftShiftPressure\":0,\"UpshiftTorqueConverterLockup\":0,\"DownshiftDelay\":600,\"DownshiftLinePressure\":0,\"DownshiftShiftPressure\":0,\"DownshiftTorqueConverterLockup\":0}]}";
-  return String(json);
-}
-
-void ShiftConfig::ReceiveConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, const String& payload)
-{
-  receivedMessage = payload;
-  Serial.println(receivedMessage);
-  
-  StaticJsonDocument<2048> doc;
-  DeserializationError error = deserializeJson(doc, receivedMessage);
-
-  if (error)
-  {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
-    return;
-  }
-
-  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, doc);
-  Serial.println("New useCanBus value after reading JSON.");
-  Serial.println("Converting UseCanBus: " + String(*useCanBusPtr));
-  Serial.println("Converting UsePedalShifters: " + String(*usePedalShiftersPtr));
-}
-
-void ShiftConfig::SendConfigViaBluetooth(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
-{
-  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
-
-  String payload;
-  serializeJson(doc, payload);
-
-  uint16_t crc = calculateCrc16(payload);
-  String framed = String(kFramePrefix) + String(payload.length()) + ";" +
-                  String(kCrcPrefix) + String(crc, HEX) + ";" + payload;
-
-  SerialBT.print(framed);
-  SerialBT.print('\n');
 }
 
 void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
@@ -189,7 +99,6 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
     createDefaultConfig(shiftSettingsPtr);
   }
 }
-
 
 bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr) {
   const char filePath[16] = "/config.json"; 
@@ -277,67 +186,6 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
     shiftSettingsPtr[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
   }
 }
-
-uint16_t ShiftConfig::calculateCrc16(const String& data)
-{
-  uint16_t crc = 0xFFFF;
-  for (size_t i = 0; i < data.length(); i++)
-  {
-    crc ^= static_cast<uint8_t>(data[i]);
-    for (int bit = 0; bit < 8; bit++)
-    {
-      if (crc & 0x0001)
-        crc = (crc >> 1) ^ 0xA001;
-      else
-        crc >>= 1;
-    }
-  }
-
-  return crc;
-}
-
-bool ShiftConfig::tryParseFramedPayload(const String& message, String& jsonOut)
-{
-  if (!message.startsWith(kFramePrefix))
-    return false;
-
-  int lenSep = message.indexOf(';');
-  if (lenSep <= 0)
-    return false;
-
-  String lenPart = message.substring(strlen(kFramePrefix), lenSep);
-  int expectedLen = lenPart.toInt();
-  if (expectedLen <= 0)
-    return false;
-
-  int crcPos = message.indexOf(kCrcPrefix, lenSep + 1);
-  if (crcPos < 0)
-    return false;
-
-  int crcSep = message.indexOf(';', crcPos);
-  if (crcSep < 0)
-    return false;
-
-  String crcPart = message.substring(crcPos + strlen(kCrcPrefix), crcSep);
-  uint16_t expectedCrc = static_cast<uint16_t>(strtoul(crcPart.c_str(), nullptr, 16));
-
-  jsonOut = message.substring(crcSep + 1);
-  if (jsonOut.length() != static_cast<size_t>(expectedLen))
-  {
-    Serial.println("Frame length mismatch");
-    return false;
-  }
-
-  uint16_t actualCrc = calculateCrc16(jsonOut);
-  if (actualCrc != expectedCrc)
-  {
-    Serial.println("Frame CRC mismatch");
-    return false;
-  }
-
-  return true;
-}
-
 void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings)
 {
   Serial.println("Creating a default config");
@@ -419,4 +267,107 @@ void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   shiftSettings[5].DownshiftLinePressure = 15;
   shiftSettings[5].DownshiftShiftPressure = 0;
   shiftSettings[5].DownshiftTorqueConverterLockup = 0;
+}
+
+void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
+{
+  if (!spiffsMountingSuccess)
+  {
+    Serial.println("SPIFFS not mounted; cannot save config");
+    return;
+  }
+
+  if (!writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr))
+  {
+    Serial.println("Failed to save config to file");
+  }
+}
+
+
+// ----- HTTP handlers -----
+
+static void handleRoot()
+{
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  String html;
+  html.reserve(4096);
+  html += F("<html><head><meta charset='utf-8'><title>VaLas Shift Config</title></head><body>");
+  html += F("<h2>Shift Config Editor</h2>");
+  html += F("<form method='POST' action='/save'>");
+
+  // Global flags
+  html += F("<label><input type='checkbox' name='useCanBus'");
+  if (*g_useCanBusPtr) html += F(" checked");
+  html += F("> Use CAN bus</label><br>");
+
+  html += F("<label><input type='checkbox' name='usePedalShifters'");
+  if (*g_usePedalShiftersPtr) html += F(" checked");
+  html += F("> Use pedal shifters</label><br><hr>");
+
+  for (int i = 0; i < 6; i++)
+  {
+    const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
+    html += "<h3>";
+    html += s.Name;
+    html += "</h3>";
+
+    html += "UpshiftDelay: <input name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'><br>";
+    html += "UpshiftLinePressure: <input name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'><br>";
+    html += "UpshiftShiftPressure: <input name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'><br>";
+    html += "UpshiftTorqueConverterLockup: <input name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'><br>";
+
+    html += "DownshiftDelay: <input name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'><br>";
+    html += "DownshiftLinePressure: <input name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'><br>";
+    html += "DownshiftShiftPressure: <input name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'><br>";
+    html += "DownshiftTorqueConverterLockup: <input name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'><br><hr>";
+  }
+
+  html += F("<input type='submit' value='Save'>");
+  html += F("</form></body></html>");
+
+  webServer.send(200, "text/html", html);
+}
+
+extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
+
+static void handleSave()
+{
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  // Checkboxes: only present if checked
+  *g_useCanBusPtr = webServer.hasArg("useCanBus");
+  *g_usePedalShiftersPtr = webServer.hasArg("usePedalShifters");
+
+  for (int i = 0; i < 6; i++)
+  {
+    String baseU = "u" + String(i);
+    String baseD = "d" + String(i);
+
+    VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
+
+    if (webServer.hasArg(baseU + "d"))  s.UpshiftDelay = webServer.arg(baseU + "d").toInt();
+    if (webServer.hasArg(baseU + "lp")) s.UpshiftLinePressure = webServer.arg(baseU + "lp").toInt();
+    if (webServer.hasArg(baseU + "sp")) s.UpshiftShiftPressure = webServer.arg(baseU + "sp").toInt();
+    if (webServer.hasArg(baseU + "tc")) s.UpshiftTorqueConverterLockup = webServer.arg(baseU + "tc").toInt();
+
+    if (webServer.hasArg(baseD + "d"))  s.DownshiftDelay = webServer.arg(baseD + "d").toInt();
+    if (webServer.hasArg(baseD + "lp")) s.DownshiftLinePressure = webServer.arg(baseD + "lp").toInt();
+    if (webServer.hasArg(baseD + "sp")) s.DownshiftShiftPressure = webServer.arg(baseD + "sp").toInt();
+    if (webServer.hasArg(baseD + "tc")) s.DownshiftTorqueConverterLockup = webServer.arg(baseD + "tc").toInt();
+  }
+
+  // Persist to SPIFFS via ShiftConfig wrapper
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr);
+
+  webServer.sendHeader("Location", "/");
+  webServer.send(303);
 }
