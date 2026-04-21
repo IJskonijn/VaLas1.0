@@ -286,6 +286,14 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
 
 // ----- HTTP handlers -----
 
+// Ideas: Show default values behind textbox
+//        Reset button with confirmation dialog
+//        Auto refresh after save / reset (Now it shows 404)
+//        Textbox width can be 1/4 or 1/5 length
+//        Log all (web) actions to console, like save and reset
+//        Log wifi password on first boot?
+//        Setting for display size like UseCanBus
+
 static void handleRoot()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)

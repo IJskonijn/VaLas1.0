@@ -27,16 +27,16 @@ void Outputs::ToggleElrHighIdle()
   old_elrToggleState = elrToggleState;
 }
 
-void Outputs::HornPressed()
-{
-    // Works together with paddle shifters, so we can use 1 wire for both horn and paddle shifter input.
-    bool hornPressed = analogRead(hornPin) == 0;
-    if (hornPressed)    {
-        Serial.println("Horn pressed");
-        // do some horn stuff
-        // switch relay on while horn is pressed, switch off when released
-    }
-}
+//void Outputs::HornPressed()
+//{
+//    // Works together with paddle shifters, so we can use 1 wire for both horn and paddle shifter input.
+//    bool hornPressed = analogRead(hornPin) == 0;
+//    if (hornPressed)    {
+//        Serial.println("Horn pressed");
+//        // do some horn stuff
+//        // switch relay on while horn is pressed, switch off when released
+//    }
+//}
 
 // void sendSpeedSignalToSpeedometer()
 // {
