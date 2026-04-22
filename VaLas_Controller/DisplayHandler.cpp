@@ -5,19 +5,20 @@
 #include "VaLas_Controller.h"
 #include "TaskStructs.h"
 
+// Forward declaration for runtime display size getter
+extern bool getDisplayIsLarge();
+
 // 128x64 for 0.96" OLED
 // 128x32 for 0.91" OLED
-#if is_096_Oled
-DisplayHandler::DisplayHandler() : u8g2(U8G2_R0){
-  u8g2_y_coordinate = 29;
-  u8g2_selectedFont = u8g2_font_logisoso28_tr;
+DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE) {
+  if (getDisplayIsLarge()) {
+    u8g2_y_coordinate = 29;
+    u8g2_selectedFont = u8g2_font_logisoso28_tr;
+  } else {
+    u8g2_y_coordinate = 32;
+    u8g2_selectedFont = u8g2_font_logisoso30_tr;
+  }
 }
-#else
-DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE){
-  u8g2_y_coordinate = 32;
-  u8g2_selectedFont = u8g2_font_logisoso30_tr;
-}
-#endif
 
 void DisplayHandler::begin()
 {
@@ -89,15 +90,17 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
     String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
     Serial.println(tempVar);
 
-#if is_096_Oled
-    u8g2.setFont(u8g2_font_logisoso18_tr);
-    u8g2.drawStr(10, 65, tempVar.c_str());
-#else
-    u8g2.setFont(u8g2_font_logisoso16_tr);
-    int atfWidth = u8g2.getStrWidth(tempVar.c_str());
-    u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
-#endif
-
+    if (getDisplayIsLarge())
+    {
+        u8g2.setFont(u8g2_font_logisoso18_tr);
+        u8g2.drawStr(10, 65, tempVar.c_str());
+    }
+    else
+    {
+        u8g2.setFont(u8g2_font_logisoso16_tr);
+        int atfWidth = u8g2.getStrWidth(tempVar.c_str());
+        u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
+    }
   }
 }
 

@@ -21,6 +21,7 @@ bool webServerInitialized = false;
 static VaLas_Controller::ShiftSetting* g_shiftSettingsPtr = nullptr;
 static bool* g_useCanBusPtr = nullptr;
 static bool* g_usePedalShiftersPtr = nullptr;
+static bool* g_useLargeDisplayPtr = nullptr;
 
 // Static default settings for display purposes
 static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
@@ -31,6 +32,7 @@ static bool g_defaultUsePedalShifters = false;
 static void handleRoot();
 static void handleSave();
 static void handleReset();
+static void initDefaultSettings();
 
 ShiftConfig::ShiftConfig()
 {
@@ -102,16 +104,17 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
     if (isLoadedFromFile)
       return;
 
-    createDefaultConfig(shiftSettingsPtr);
+    CreateDefaultConfig(shiftSettingsPtr);
     writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr);
   }
   else
   {
-    createDefaultConfig(shiftSettingsPtr);
+    CreateDefaultConfig(shiftSettingsPtr);
   }
 }
 
-bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr) {
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
+{
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
   if (!file) {
@@ -135,7 +138,8 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
   return true;
 }
 
-bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr) {  
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr)
+{  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
   if (!file) {    
@@ -197,7 +201,8 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
     shiftSettingsPtr[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
   }
 }
-void ShiftConfig::createDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings)
+
+void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings)
 {
   Serial.println("Creating a default config");
 
@@ -304,6 +309,8 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
 //        Log all (web) actions to console, like save and reset
 //        Setting for display size like UseCanBus
 
+extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
+
 static void handleRoot()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr)
@@ -366,7 +373,7 @@ static void handleRoot()
   html += F("</body></html>");
 
   // Respond with HTML + JS redirect
-  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
+  //String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
   webServer.send(200, "text/html", html);
 }
 
@@ -380,13 +387,13 @@ static void handleReset()
   }
   
   // Restore defaults
-  ShiftConfig::createDefaultConfig(g_shiftSettingsPtr);
+  ShiftConfig::CreateDefaultConfig(g_shiftSettingsPtr);
   *g_useCanBusPtr = g_defaultUseCanBus;
   *g_usePedalShiftersPtr = g_defaultUsePedalShifters;
   *g_useLargeDisplayPtr = g_defaultUseLargeDisplay;
 
   // Save to SPIFFS
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr);
 
   Serial.println("[WEB] Reset action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
@@ -408,8 +415,6 @@ static void handleReset()
   String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
   webServer.send(200, "text/html", html);
 }
-
-extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
 
 static void handleSave()
 {
@@ -442,7 +447,7 @@ static void handleSave()
   }
 
   // Persist to SPIFFS via ShiftConfig wrapper
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr);
   Serial.println("[WEB] Save action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
   Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
@@ -466,8 +471,12 @@ static void handleSave()
 
 // Helper to initialize the static default settings
 static void initDefaultSettings() {
-  ShiftConfig::createDefaultConfig(g_defaultShiftSettings);
+  ShiftConfig::CreateDefaultConfig(g_defaultShiftSettings);
   g_defaultUseLargeDisplay = false;
   g_defaultUseCanBus = false;
   g_defaultUsePedalShifters = false;
+}
+
+bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")
+  return g_useLargeDisplayPtr ? *g_useLargeDisplayPtr : false;
 }

@@ -36,6 +36,7 @@ Gearlever* gearLeverInterface;
 
 bool initial_UseCanBus = true; // Default is false
 bool initial_UsePedalShifters = true; // Default is false
+bool initial_UseLargeDisplay = false; // Default is false
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 
@@ -74,6 +75,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
 {
   &initial_UseCanBus,
   &initial_UsePedalShifters,
+  &initial_UseLargeDisplay,
   initial_GearboxSettingsPtr
 };
 
@@ -101,7 +103,7 @@ void setup()
   Serial.begin(115200); // open the serial port at 9600 bps:
   Serial.write("Begin program");
   Serial.write("\n");
-    initial_screenToDisplay = VaLas_Controller::DisplayScreen::Main;
+  initial_screenToDisplay = VaLas_Controller::DisplayScreen::Main;
   initial_OldLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   initial_CurrentLeverPosition = VaLas_Controller::GearLeverPosition::Unknown;
   initial_CurrentShiftRequest = VaLas_Controller::ShiftRequest::NoShift;

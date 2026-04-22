@@ -11,9 +11,6 @@
 
 // https://lastminuteengineers.com/esp32-pinout-reference/
 
-/// Display size
-#define is_096_Oled false // true = 128x64, false = 128x32
-
 /// Canbus/SPI pins
 #define canInt 2
 
