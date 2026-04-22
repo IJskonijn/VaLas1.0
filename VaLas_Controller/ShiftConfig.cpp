@@ -22,8 +22,15 @@ static VaLas_Controller::ShiftSetting* g_shiftSettingsPtr = nullptr;
 static bool* g_useCanBusPtr = nullptr;
 static bool* g_usePedalShiftersPtr = nullptr;
 
+// Static default settings for display purposes
+static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
+static bool g_defaultUseLargeDisplay = false;
+static bool g_defaultUseCanBus = false;
+static bool g_defaultUsePedalShifters = false;
+
 static void handleRoot();
 static void handleSave();
+static void handleReset();
 
 ShiftConfig::ShiftConfig()
 {
@@ -48,6 +55,7 @@ void ShiftConfig::init()
     Serial.print("WiFi AP started. Connect to SSID: ");
     Serial.println(kApSsid);
     Serial.println("IP address: " + WiFi.softAPIP().toString());
+    Serial.println("Pass: " + String(kApPassword));
   }
   else
   {
@@ -62,6 +70,7 @@ void ShiftConfig::execute(void * parameter)
   TaskStructs::ShiftConfigParameters *parameters = (TaskStructs::ShiftConfigParameters*) parameter;
   bool* useCanBusPtr = parameters->useCanBusPtr;
   bool* usePedalShiftersPtr = parameters->usePedalShiftersPtr;
+  bool* useLargeDisplayPtr = parameters->useLargeDisplayPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
 
   if (!webServerInitialized)
@@ -69,9 +78,11 @@ void ShiftConfig::execute(void * parameter)
     g_shiftSettingsPtr = gearboxSettingsPtr;
     g_useCanBusPtr = useCanBusPtr;
     g_usePedalShiftersPtr = usePedalShiftersPtr;
+    g_useLargeDisplayPtr = useLargeDisplayPtr;
 
     webServer.on("/", HTTP_GET, handleRoot);
     webServer.on("/save", HTTP_POST, handleSave);
+    webServer.on("/reset", HTTP_POST, handleReset);
     webServer.begin();
     webServerInitialized = true;
 
@@ -291,15 +302,21 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
 //        Auto refresh after save / reset (Now it shows 404)
 //        Textbox width can be 1/4 or 1/5 length
 //        Log all (web) actions to console, like save and reset
-//        Log wifi password on first boot?
 //        Setting for display size like UseCanBus
 
 static void handleRoot()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
+  }
+
+  // Ensure default settings are initialized
+  static bool defaultsInitialized = false;
+  if (!defaultsInitialized) {
+    initDefaultSettings();
+    defaultsInitialized = true;
   }
 
   String html;
@@ -311,33 +328,84 @@ static void handleRoot()
   // Global flags
   html += F("<label><input type='checkbox' name='useCanBus'");
   if (*g_useCanBusPtr) html += F(" checked");
-  html += F("> Use CAN bus</label><br>");
+  html += F("> Use CAN bus</label>");
+  html += " (default: ";
+  html += g_defaultUseCanBus ? "checked" : "unchecked";
+  html += ")<br>";
 
   html += F("<label><input type='checkbox' name='usePedalShifters'");
   if (*g_usePedalShiftersPtr) html += F(" checked");
-  html += F("> Use pedal shifters</label><br><hr>");
+  html += F("> Use pedal shifters</label>");
+  html += " (default: ";
+  html += g_defaultUsePedalShifters ? "checked" : "unchecked";
+  html += ")<br><hr>";
 
   for (int i = 0; i < 6; i++)
   {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
+    const VaLas_Controller::ShiftSetting& d = g_defaultShiftSettings[i];
     html += "<h3>";
     html += s.Name;
     html += "</h3>";
 
-    html += "UpshiftDelay: <input name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'><br>";
-    html += "UpshiftLinePressure: <input name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'><br>";
-    html += "UpshiftShiftPressure: <input name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'><br>";
-    html += "UpshiftTorqueConverterLockup: <input name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'><br>";
+  html += "UpshiftDelay: <input style='width:20%' name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'> (default: " + String(d.UpshiftDelay) + ")<br>";
+  html += "UpshiftLinePressure: <input style='width:20%' name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'> (default: " + String(d.UpshiftLinePressure) + ")<br>";
+  html += "UpshiftShiftPressure: <input style='width:20%' name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'> (default: " + String(d.UpshiftShiftPressure) + ")<br>";
+  html += "UpshiftTorqueConverterLockup: <input style='width:20%' name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'> (default: " + String(d.UpshiftTorqueConverterLockup) + ")<br>";
 
-    html += "DownshiftDelay: <input name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'><br>";
-    html += "DownshiftLinePressure: <input name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'><br>";
-    html += "DownshiftShiftPressure: <input name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'><br>";
-    html += "DownshiftTorqueConverterLockup: <input name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'><br><hr>";
+  html += "DownshiftDelay: <input style='width:20%' name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'> (default: " + String(d.DownshiftDelay) + ")<br>";
+  html += "DownshiftLinePressure: <input style='width:20%' name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'> (default: " + String(d.DownshiftLinePressure) + ")<br>";
+  html += "DownshiftShiftPressure: <input style='width:20%' name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'> (default: " + String(d.DownshiftShiftPressure) + ")<br>";
+  html += "DownshiftTorqueConverterLockup: <input style='width:20%' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'> (default: " + String(d.DownshiftTorqueConverterLockup) + ")<br><hr>";
   }
 
   html += F("<input type='submit' value='Save'>");
-  html += F("</form></body></html>");
+  html += F(" <button type='button' onclick=\"if(confirm('Are you sure you want to reset to defaults?')){fetch('/reset',{method:'POST'}).then(()=>window.location.reload());}\">Reset</button>");
+  html += F("</form>");
+  html += F("<script>// Prevent form resubmission on reload\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
+  html += F("</body></html>");
 
+  // Respond with HTML + JS redirect
+  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
+  webServer.send(200, "text/html", html);
+}
+
+// Handle reset: restore defaults, save, and redirect
+static void handleReset()
+{
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr)
+  {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+  
+  // Restore defaults
+  ShiftConfig::createDefaultConfig(g_shiftSettingsPtr);
+  *g_useCanBusPtr = g_defaultUseCanBus;
+  *g_usePedalShiftersPtr = g_defaultUsePedalShifters;
+  *g_useLargeDisplayPtr = g_defaultUseLargeDisplay;
+
+  // Save to SPIFFS
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr);
+
+  Serial.println("[WEB] Reset action received");
+  Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
+  Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
+  Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
+  for (int i = 0; i < 6; i++) {
+    const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
+    Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
+    Serial.print(", ULP="); Serial.print(s.UpshiftLinePressure);
+    Serial.print(", USP="); Serial.print(s.UpshiftShiftPressure);
+    Serial.print(", UTC="); Serial.print(s.UpshiftTorqueConverterLockup);
+    Serial.print(", DDelay="); Serial.print(s.DownshiftDelay);
+    Serial.print(", DLP="); Serial.print(s.DownshiftLinePressure);
+    Serial.print(", DSP="); Serial.print(s.DownshiftShiftPressure);
+    Serial.print(", DTC="); Serial.println(s.DownshiftTorqueConverterLockup);
+  }
+
+  // Respond with HTML + JS redirect
+  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
   webServer.send(200, "text/html", html);
 }
 
@@ -345,7 +413,7 @@ extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
 
 static void handleSave()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -354,7 +422,7 @@ static void handleSave()
   // Checkboxes: only present if checked
   *g_useCanBusPtr = webServer.hasArg("useCanBus");
   *g_usePedalShiftersPtr = webServer.hasArg("usePedalShifters");
-
+  *g_useLargeDisplayPtr = webServer.hasArg("useLargeDisplay");
   for (int i = 0; i < 6; i++)
   {
     String baseU = "u" + String(i);
@@ -374,8 +442,32 @@ static void handleSave()
   }
 
   // Persist to SPIFFS via ShiftConfig wrapper
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr);
+  Serial.println("[WEB] Save action received");
+  Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
+  Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
+  Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
+  for (int i = 0; i < 6; i++) {
+    const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
+    Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
+    Serial.print(", ULP="); Serial.print(s.UpshiftLinePressure);
+    Serial.print(", USP="); Serial.print(s.UpshiftShiftPressure);
+    Serial.print(", UTC="); Serial.print(s.UpshiftTorqueConverterLockup);
+    Serial.print(", DDelay="); Serial.print(s.DownshiftDelay);
+    Serial.print(", DLP="); Serial.print(s.DownshiftLinePressure);
+    Serial.print(", DSP="); Serial.print(s.DownshiftShiftPressure);
+    Serial.print(", DTC="); Serial.println(s.DownshiftTorqueConverterLockup);
+  }
 
-  webServer.sendHeader("Location", "/");
-  webServer.send(303);
+  // Send HTML with JS redirect to avoid 404/blank page
+  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
+  webServer.send(200, "text/html", html);
+}
+
+// Helper to initialize the static default settings
+static void initDefaultSettings() {
+  ShiftConfig::createDefaultConfig(g_defaultShiftSettings);
+  g_defaultUseLargeDisplay = false;
+  g_defaultUseCanBus = false;
+  g_defaultUsePedalShifters = false;
 }

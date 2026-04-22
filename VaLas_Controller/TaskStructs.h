@@ -27,6 +27,7 @@ class TaskStructs {
 
         struct shiftConfigParameters
         {
+            bool* useLargeDisplayPtr;
             bool* useCanBusPtr;
             bool* usePedalShiftersPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
