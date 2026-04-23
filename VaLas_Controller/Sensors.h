@@ -12,7 +12,6 @@ class Sensors {
         int ReadEngineRpm(); // Returns engine RPM (from crankshaft sensor)
         void SetEngineConfig(VaLas_Controller::EngineType engineType, VaLas_Controller::RpmGaugeType gaugeType);
         void OutputRpmToGauge(int engineRpm); // Outputs correct signal to RPM gauge
-        bool init_sensors();
         bool read_input_rpm(int& n2Rpm, int& n3Rpm, int& calcRpm, bool check_sanity);
         bool read_atf_temp(int* dest);
         bool read_engine_rpm(int* engineRpm); // Raw engine RPM reading

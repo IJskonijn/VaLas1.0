@@ -309,6 +309,9 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
 //        Log all (web) actions to console, like save and reset
 //        Setting for display size like UseCanBus
 
+// Fix auto refresh
+// Fix default setting (enable CAN + paddle, disable 0.96 OLED)
+
 extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
 
 static void handleRoot()
@@ -345,8 +348,15 @@ static void handleRoot()
   html += F("> Use pedal shifters</label>");
   html += " (default: ";
   html += g_defaultUsePedalShifters ? "checked" : "unchecked";
-  html += ")<br><hr>";
+  html += ")<br>";
 
+  html += F("<label><input type='checkbox' name='useLargeDisplay'");
+  if (*g_useLargeDisplayPtr) html += F(" checked");
+  html += F("> Use 0.96 OLED</label>");
+  html += " (default: ";
+  html += g_defaultUseLargeDisplay ? "checked" : "unchecked";
+  html += ")<br><hr>";
+  
   for (int i = 0; i < 6; i++)
   {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
@@ -355,15 +365,15 @@ static void handleRoot()
     html += s.Name;
     html += "</h3>";
 
-  html += "UpshiftDelay: <input style='width:20%' name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'> (default: " + String(d.UpshiftDelay) + ")<br>";
-  html += "UpshiftLinePressure: <input style='width:20%' name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'> (default: " + String(d.UpshiftLinePressure) + ")<br>";
-  html += "UpshiftShiftPressure: <input style='width:20%' name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'> (default: " + String(d.UpshiftShiftPressure) + ")<br>";
-  html += "UpshiftTorqueConverterLockup: <input style='width:20%' name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'> (default: " + String(d.UpshiftTorqueConverterLockup) + ")<br>";
+  html += "UpshiftDelay: <input size='4' name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'> (default: " + String(d.UpshiftDelay) + ")<br>";
+  html += "UpshiftLinePressure: <input size='4' name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'> (default: " + String(d.UpshiftLinePressure) + ")<br>";
+  html += "UpshiftShiftPressure: <input size='4' name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'> (default: " + String(d.UpshiftShiftPressure) + ")<br>";
+  html += "UpshiftTorqueConverterLockup: <input size='4' name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'> (default: " + String(d.UpshiftTorqueConverterLockup) + ")<br>";
 
-  html += "DownshiftDelay: <input style='width:20%' name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'> (default: " + String(d.DownshiftDelay) + ")<br>";
-  html += "DownshiftLinePressure: <input style='width:20%' name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'> (default: " + String(d.DownshiftLinePressure) + ")<br>";
-  html += "DownshiftShiftPressure: <input style='width:20%' name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'> (default: " + String(d.DownshiftShiftPressure) + ")<br>";
-  html += "DownshiftTorqueConverterLockup: <input style='width:20%' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'> (default: " + String(d.DownshiftTorqueConverterLockup) + ")<br><hr>";
+  html += "DownshiftDelay: <input size='4' name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'> (default: " + String(d.DownshiftDelay) + ")<br>";
+  html += "DownshiftLinePressure: <input size='4' name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'> (default: " + String(d.DownshiftLinePressure) + ")<br>";
+  html += "DownshiftShiftPressure: <input size='4' name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'> (default: " + String(d.DownshiftShiftPressure) + ")<br>";
+  html += "DownshiftTorqueConverterLockup: <input size='4' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'> (default: " + String(d.DownshiftTorqueConverterLockup) + ")<br><hr>";
   }
 
   html += F("<input type='submit' value='Save'>");
@@ -372,8 +382,6 @@ static void handleRoot()
   html += F("<script>// Prevent form resubmission on reload\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
 
-  // Respond with HTML + JS redirect
-  //String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
   webServer.send(200, "text/html", html);
 }
 
@@ -411,9 +419,9 @@ static void handleReset()
     Serial.print(", DTC="); Serial.println(s.DownshiftTorqueConverterLockup);
   }
 
-  // Respond with HTML + JS redirect
-  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
-  webServer.send(200, "text/html", html);
+  webServer.sendHeader("Connection", "close");
+  webServer.sendHeader("Location", "/");
+  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
 }
 
 static void handleSave()
@@ -464,17 +472,17 @@ static void handleSave()
     Serial.print(", DTC="); Serial.println(s.DownshiftTorqueConverterLockup);
   }
 
-  // Send HTML with JS redirect to avoid 404/blank page
-  String html = "<html><head><meta http-equiv='refresh' content='0;url=/'><script>window.location.replace('/');</script></head><body>Redirecting...</body></html>";
-  webServer.send(200, "text/html", html);
+  webServer.sendHeader("Connection", "close");
+  webServer.sendHeader("Location", "/");
+  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
 }
 
 // Helper to initialize the static default settings
 static void initDefaultSettings() {
   ShiftConfig::CreateDefaultConfig(g_defaultShiftSettings);
   g_defaultUseLargeDisplay = false;
-  g_defaultUseCanBus = false;
-  g_defaultUsePedalShifters = false;
+  g_defaultUseCanBus = true;
+  g_defaultUsePedalShifters = true;
 }
 
 bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")

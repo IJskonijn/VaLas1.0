@@ -115,9 +115,8 @@ void setup()
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
-  // Initialize sensors
-  sensors.init_sensors();
-    // Configure engine RPM settings
+  
+  // Configure engine RPM settings
   // Change these values based on your setup:
   // 
   // For OM603 engine (144 flywheel teeth):
