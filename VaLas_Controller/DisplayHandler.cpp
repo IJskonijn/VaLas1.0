@@ -26,6 +26,12 @@ void DisplayHandler::begin()
   Serial.println("Init displayhandler");
   Serial.println("Is using 0.96 OLED: " + is096oled);
   Serial.println("Using display y coordinate: " + String(u8g2_y_coordinate));
+
+  Wire.begin(21, 22);
+  pinMode(21, INPUT_PULLUP);  // SDA
+  pinMode(22, INPUT_PULLUP);  // SCL
+  
+  Wire.setClock(40000);  // 40 kHz, lower clock speed for better stability over longer wires
   u8g2.begin();
 }
 
