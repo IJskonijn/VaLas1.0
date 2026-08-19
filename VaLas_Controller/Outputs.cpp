@@ -27,6 +27,15 @@ void Outputs::ToggleElrHighIdle()
   old_elrToggleState = elrToggleState;
 }
 
+bool Outputs::IsStartAllowed(VaLas_Controller::GearLeverPosition currentLeverPosition)
+{
+  bool startAllowed = currentLeverPosition == VaLas_Controller::GearLeverPosition::Park ||
+                      currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral;
+
+  digitalWrite(startRelayPin, startAllowed ? HIGH : LOW);
+  return startAllowed;
+}
+
 //void Outputs::HornPressed()
 //{
 //    // Works together with paddle shifters, so we can use 1 wire for both horn and paddle shifter input.

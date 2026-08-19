@@ -22,6 +22,7 @@
 #define upShiftPin 16
 #define downShiftPin 17
 #define gearLeverPotPin 4    // Read potentiometer value to determine if in P, R, N, D
+#define startRelayPin 13     // Start interlock relay; HIGH when the lever is in P or N
 
 #define y3Pin 32             // 1-2, 4-5 switch    shift      LOW/HIGH
 #define y4Pin 33             // 3-4 switch         shift      LOW/HIGH

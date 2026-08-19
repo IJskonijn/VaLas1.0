@@ -21,6 +21,7 @@
 #include "ShiftControl.h"
 #include "DisplayHandler.h"
 #include "Sensors.h"
+#include "Outputs.h"
 #include "Gearlever.h"
 #include "Gearlever_CAN.h"
 #include "Gearlever_Modded.h"
@@ -29,6 +30,7 @@ int pwmFreq = 1000;
 VaLas_Controller::PwmChannels pwmChannels;
 
 Sensors sensors;
+Outputs outputs;
 DisplayHandler displayHandler;
 ShiftControl shiftControl;
 ShiftConfig shiftConfig;
@@ -140,6 +142,9 @@ void setup()
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
 
+  pinMode(startRelayPin, OUTPUT);
+  digitalWrite(startRelayPin, LOW);
+
   pinMode(y3Pin, OUTPUT);
   pinMode(y4Pin, OUTPUT);
   pinMode(y5Pin, OUTPUT);
@@ -227,8 +232,11 @@ void setup()
 }
 
 void gearLeverHandlerTask(void* parameter){
+  TaskStructs::GearLeverParameters* params = (TaskStructs::GearLeverParameters*) parameter;
+
   for(;;){
     gearLeverInterface->ReadGearLever(parameter);
+    outputs.IsStartAllowed(*(params->currentLeverPositionPtr));
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
