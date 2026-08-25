@@ -145,12 +145,18 @@ void setup()
   pinMode(startRelayPin, OUTPUT);
   digitalWrite(startRelayPin, LOW);
 
-  pinMode(y3Pin, OUTPUT);
-  pinMode(y4Pin, OUTPUT);
-  pinMode(y5Pin, OUTPUT);
-  pinMode(mpcPin, OUTPUT);
-  pinMode(spcPin, OUTPUT);
-  pinMode(tccPin, OUTPUT);
+  pinMode(y3Pin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(y4Pin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(y5Pin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(mpcPin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(spcPin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(tccPin, OUTPUT | OPEN_DRAIN_E);
+  digitalWrite(y3Pin, LOW);
+  digitalWrite(y4Pin, LOW);
+  digitalWrite(y5Pin, LOW);
+  digitalWrite(mpcPin, LOW);
+  digitalWrite(spcPin, LOW);
+  digitalWrite(tccPin, LOW);
   
   // Assign led pins to a channel
   ledcAttachPin(mpcPin, pwmChannels.mpcChannel);
