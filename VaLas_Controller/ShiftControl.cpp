@@ -182,9 +182,9 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
   {
-    ledcWrite(pwmChannelsPointer->mpcChannel, (255/100*40)); //40%
-    ledcWrite(pwmChannelsPointer->spcChannel, (255/100*33)); //33%
-    ledcWrite(pwmChannelsPointer->y4Channel, (255/100*30)); //30%, Back to idle
+    ledcWrite(pwmChannelsPointer->mpcChannel, (255 * 40) / 100); //40%
+    ledcWrite(pwmChannelsPointer->spcChannel, (255 * 33) / 100); //33%
+    digitalWrite(y4Pin, LOW); // Back to idle
 
     // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
     // New info, 3-4 solenoid is not actually pulsing in original EGS
@@ -195,7 +195,7 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   }
   else
   {
-    ledcWrite(pwmChannelsPointer->y4Channel, 0);
+    digitalWrite(y4Pin, LOW);
     ledcWrite(pwmChannelsPointer->spcChannel, 0); // Set to 0 in D and R
   }
   
@@ -221,24 +221,24 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
   else
     return; // Something went wrong
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, gearboxSettings[gear-1].DownshiftLinePressure);
-  ledcWrite(pwmChannelsPointer->spcChannel, gearboxSettings[gear-1].DownshiftShiftPressure);
+  ledcWrite(pwmChannelsPointer->mpcChannel, gearboxSettings[gear].DownshiftLinePressure);
+  ledcWrite(pwmChannelsPointer->spcChannel, gearboxSettings[gear].DownshiftShiftPressure);
   digitalWrite(gearPin, HIGH);
-  digitalWrite(tccPin, gearboxSettings[gear-1].DownshiftTorqueConverterLockup);
+  ledcWrite(pwmChannelsPointer->tccChannel, gearboxSettings[gear].DownshiftTorqueConverterLockup);
 
   if (gear == 2)
   {
-    vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
+    vTaskDelay(gearboxSettings[gear].DownshiftDelay);
 
-    ledcWrite(pwmChannelsPointer->mpcChannel, (gearboxSettings[gear-1].DownshiftLinePressure /2));
-    ledcWrite(pwmChannelsPointer->spcChannel, (gearboxSettings[gear-1].DownshiftShiftPressure /2));
+    ledcWrite(pwmChannelsPointer->mpcChannel, (gearboxSettings[gear].DownshiftLinePressure / 2));
+    ledcWrite(pwmChannelsPointer->spcChannel, (gearboxSettings[gear].DownshiftShiftPressure / 2));
     digitalWrite(gearPin, LOW);
 
     vTaskDelay(50); // delay(50);
   }
   else
   {
-    vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
+    vTaskDelay(gearboxSettings[gear].DownshiftDelay);
   }
 
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
@@ -263,12 +263,12 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
   else
     return; // Something went wrong
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, gearboxSettings[gear-1].UpshiftLinePressure);
-  ledcWrite(pwmChannelsPointer->spcChannel, gearboxSettings[gear-1].UpshiftShiftPressure);
+  ledcWrite(pwmChannelsPointer->mpcChannel, gearboxSettings[gear - 2].UpshiftLinePressure);
+  ledcWrite(pwmChannelsPointer->spcChannel, gearboxSettings[gear - 2].UpshiftShiftPressure);
   digitalWrite(gearPin, HIGH);
-  digitalWrite(tccPin, gearboxSettings[gear-1].UpshiftTorqueConverterLockup);
+  ledcWrite(pwmChannelsPointer->tccChannel, gearboxSettings[gear - 2].UpshiftTorqueConverterLockup);
 
-  vTaskDelay(gearboxSettings[gear-1].UpshiftDelay);
+  vTaskDelay(gearboxSettings[gear - 2].UpshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, customMpcAfterShift);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
@@ -282,7 +282,7 @@ void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition cu
   String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  vTaskDelay(gearboxSettings[gear-1].DownshiftDelay);
+  vTaskDelay(gearboxSettings[gear].DownshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, 15);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
@@ -297,10 +297,10 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
   String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  vTaskDelay(gearboxSettings[gear-1].UpshiftDelay);
+  vTaskDelay(gearboxSettings[gear - 2].UpshiftDelay);
 
   ledcWrite(pwmChannelsPointer->mpcChannel, 25);
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
-  ledcWrite(pwmChannelsPointer->tccChannel, (255/100*95)); //95% for torque converter lockup with some slip for comfort
+  ledcWrite(pwmChannelsPointer->tccChannel, (255 * 95) / 100); //95% for torque converter lockup with some slip for comfort
 }

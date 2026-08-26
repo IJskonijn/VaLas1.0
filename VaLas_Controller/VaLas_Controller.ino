@@ -145,12 +145,12 @@ void setup()
   pinMode(startRelayPin, OUTPUT);
   digitalWrite(startRelayPin, LOW);
 
-  pinMode(y3Pin, OUTPUT | OPEN_DRAIN_E);
-  pinMode(y4Pin, OUTPUT | OPEN_DRAIN_E);
-  pinMode(y5Pin, OUTPUT | OPEN_DRAIN_E);
-  pinMode(mpcPin, OUTPUT | OPEN_DRAIN_E);
-  pinMode(spcPin, OUTPUT | OPEN_DRAIN_E);
-  pinMode(tccPin, OUTPUT | OPEN_DRAIN_E);
+  pinMode(y3Pin, OUTPUT | OPEN_DRAIN);
+  pinMode(y4Pin, OUTPUT | OPEN_DRAIN);
+  pinMode(y5Pin, OUTPUT | OPEN_DRAIN);
+  pinMode(mpcPin, OUTPUT | OPEN_DRAIN);
+  pinMode(spcPin, OUTPUT | OPEN_DRAIN);
+  pinMode(tccPin, OUTPUT | OPEN_DRAIN);
   digitalWrite(y3Pin, LOW);
   digitalWrite(y4Pin, LOW);
   digitalWrite(y5Pin, LOW);
@@ -162,13 +162,11 @@ void setup()
   ledcAttachPin(mpcPin, pwmChannels.mpcChannel);
   ledcAttachPin(spcPin, pwmChannels.spcChannel);
   ledcAttachPin(tccPin, pwmChannels.tccChannel);
-  ledcAttachPin(y4Pin, pwmChannels.y4Channel);
 
   // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
   ledcSetup(pwmChannels.mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
   ledcSetup(pwmChannels.spcChannel, pwmFreq, 8);
   ledcSetup(pwmChannels.tccChannel, pwmFreq, 8);
-  ledcSetup(pwmChannels.y4Channel, pwmFreq, 8);
 
   // Set all the ELR inputs and outputs
   pinMode(elrTogglePin, INPUT_PULLUP);
