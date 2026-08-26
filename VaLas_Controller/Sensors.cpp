@@ -226,8 +226,6 @@ void Sensors::SetEngineConfig(VaLas_Controller::EngineType engineType, VaLas_Con
 int Sensors::ReadEngineRpm() {
     int engineRpm = 0;
     if (read_engine_rpm(&engineRpm)) {
-        // Output the signal to the RPM gauge
-        OutputRpmToGauge(engineRpm);
         return engineRpm;
     }
     return 0;

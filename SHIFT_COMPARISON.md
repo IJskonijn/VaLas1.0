@@ -78,6 +78,35 @@ The `7226ctrl` project supports both manual and automatic operation. Its manual 
 - TCC is explicitly set to zero at shift start.
 - The project also performs sensor-based pre-shift and post-shift processing; those parts are not required for the current manual-only controller.
 
+Its default manual pressure values are not directly comparable to VaLas values. `7226ctrl` stores each value as a percentage, then converts it to PWM using:
+
+```cpp
+PWM = (100 - configuredPercent) * 2.55
+```
+
+It also passes the same configured value to both SPC and MPC in the manual path. At 12 V, before battery compensation, the effective defaults are approximately:
+
+| Transition | `7226ctrl` setting | Approx. MPC/SPC PWM | Original VaLas MPC/SPC | Current VaLas default |
+|---|---:|---:|---:|---:|
+| 1 -> 2 | 35% | 166 / 255 | 40 / 40 | 80 / 90 |
+| 2 -> 3 | 72% | 71 / 255 | 80 / 80 | 80 / 80 |
+| 3 -> 4 | 80% | 51 / 255 | 90 / 100 | 90 / 100 |
+| 4 -> 5 | 80% | 51 / 255 | 100 / 120 | 100 / 120 |
+| 5 -> 4 | 65% | 89 / 255 | 140 / 140 | 140 / 140 |
+| 4 -> 3 | 65% | 89 / 255 | 140 / 140 | 140 / 140 |
+| 3 -> 2 | 17% | 212 / 255 | 180 / 180 | 180 / 180 |
+| 2 -> 1 | 35% | 166 / 255 | 40 / 40 | 0 / 0 |
+
+The approximate PWM values are intentionally only a translation of the source code; `7226ctrl` applies battery-voltage normalization and its configured values may have been tuned for a different driver/transmission installation. The important conclusion is that `7226ctrl` is not using the same hydraulic calibration as VaLas. Its values are often substantially softer or stronger, and its 1->2/2->1 setting is particularly different from the original VaLas values.
+
+### Timing difference
+
+The original VaLas project uses fixed transition delays, mostly 600 ms, with 3->4 at 1200 ms, 3->2 including a 20 ms pre-delay and a 50 ms intermediate wait, and 5 <-> 5+ at 400 ms.
+
+The current VaLas controller preserves that fixed-delay style through `ShiftSetting` profiles.
+
+`7226ctrl` does not use an equivalent fixed delay per transition in the manual path. It starts the shift, then completes it through its periodic shift/sensor state machine. The shift can be held by pre-shift boost logic, and the actual stop is driven by the project's shift timing and N2/N3/sensor processing. Therefore, its pressure values and behavior should not be copied into the current fixed-delay manual controller without also adopting the associated state machine and validation logic.
+
 Do not copy its `decideGear()` automatic logic, speed/throttle maps, or `fullAuto` path into the current project for this test phase.
 
 ## Configuration indexing and transition profiles
@@ -164,3 +193,9 @@ Before changing hydraulic values, first resolve these software and electrical qu
 5. Align each configurable profile with a specific transition and preserve the original manual timing as the initial baseline.
 
 The current code does not appear to implement speed/throttle-based automatic shifting. Its manual-only behavior is therefore a suitable basis for testing, provided CAN/pedal inputs are configured intentionally and the output issues above are resolved or experimentally ruled out.
+
+## Startup panic diagnosis
+
+The controller's sensor task called `Sensors::OutputRpmToGauge()`, which wrote to `RPM_GAUGE_CHANNEL` (channel 4). That channel was not initialized or attached to `PIN_RPM_GAUGE_OUT` in `setup()`. The resulting `ledc_get_duty(...): LEDC is not initialized` message was followed by the core 1 abort/reboot loop. The optional RPM gauge forwarding is now disabled, so the uninitialized channel is no longer used.
+
+The optional ELR high-idle PWM output was also never called by the application. Its pin and LEDC channel initialization has been removed for now. Engine RPM measurement remains active for internal data, but it is no longer sent to the optional external gauge.

@@ -167,12 +167,6 @@ void setup()
   ledcSetup(pwmChannels.mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
   ledcSetup(pwmChannels.spcChannel, pwmFreq, 8);
   ledcSetup(pwmChannels.tccChannel, pwmFreq, 8);
-
-  // Set all the ELR inputs and outputs
-  pinMode(elrTogglePin, INPUT_PULLUP);
-  pinMode(elrPwmPin, OUTPUT);
-  ledcAttachPin(elrPwmPin, elrChannel);
-  ledcSetup(elrChannel, elrPwmFreq, 8);
   
   shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters);
 
@@ -286,7 +280,7 @@ void sensorHandlerTask(void* parameter){
       *(params->calculatedRpmPtr) = calcRpm;
     }
     
-    // Read engine RPM and output signal to gauge
+    // Read engine RPM for diagnostics/display data; optional gauge output is disabled.
     int engineRpm = sensors.ReadEngineRpm();
     initial_EngineRpm = engineRpm; // Update global engine RPM variable
     
