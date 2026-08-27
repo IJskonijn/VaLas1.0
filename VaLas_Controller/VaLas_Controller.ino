@@ -151,22 +151,23 @@ void setup()
   pinMode(mpcPin, OUTPUT | OPEN_DRAIN);
   pinMode(spcPin, OUTPUT | OPEN_DRAIN);
   pinMode(tccPin, OUTPUT | OPEN_DRAIN);
+
+  // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
+  ledcSetup(pwmChannels.mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
+  ledcSetup(pwmChannels.spcChannel, pwmFreq, 8);
+  ledcSetup(pwmChannels.tccChannel, pwmFreq, 8);
+  
+  // Assign led pins to a channel
+  ledcAttachPin(mpcPin, pwmChannels.mpcChannel);
+  ledcAttachPin(spcPin, pwmChannels.spcChannel);
+  ledcAttachPin(tccPin, pwmChannels.tccChannel);
+  
   digitalWrite(y3Pin, LOW);
   digitalWrite(y4Pin, LOW);
   digitalWrite(y5Pin, LOW);
   digitalWrite(mpcPin, LOW);
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
-  
-  // Assign led pins to a channel
-  ledcAttachPin(mpcPin, pwmChannels.mpcChannel);
-  ledcAttachPin(spcPin, pwmChannels.spcChannel);
-  ledcAttachPin(tccPin, pwmChannels.tccChannel);
-
-  // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
-  ledcSetup(pwmChannels.mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
-  ledcSetup(pwmChannels.spcChannel, pwmFreq, 8);
-  ledcSetup(pwmChannels.tccChannel, pwmFreq, 8);
   
   shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters);
 
