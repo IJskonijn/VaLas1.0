@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VaLas Shift Config Preview</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 450px; margin: 24px auto; padding: 0 16px; color: #222; }
+    h2 { margin-bottom: 20px; }
+    h3 { margin: 18px 0 8px; padding-top: 8px; border-top: 1px solid #bbb; }
+    label { display: inline-block; min-width: 310px; margin: 4px 0; }
+    fieldset label { display: inline-flex; justify-content: space-between; gap: 6px; align-items: center; width: 275px; min-width: 0; white-space: nowrap; }
+    fieldset label input { box-sizing: border-box; width: 5rem; }
+    fieldset .hint { display: inline-block; width: auto; margin-left: 6px; vertical-align: middle; }
+    input[type='number'] { width: 70px; }
+    .hint { color: #555; font-size: 0.9em; }
+    .actions { margin-top: 18px; }
+    button, input[type='submit'] { padding: 5px 12px; margin-right: 8px; }
+    .import-export { border-top: 1px solid #bbb; margin-top: 18px; padding-top: 8px; }
+    @media (max-width: 450px) {
+      body { margin: 10px auto; padding: 0 8px; font-size: 14px; }
+      h2 { font-size: 1.35em; }
+      h3 { font-size: 1.1em; }
+      fieldset label { width: 100%; }
+      fieldset .hint { display: block; width: auto; margin: -2px 0 2px 2px; }
+    }
+  </style>
+</head>
+<body>
+  <h2>Shift Config Editor</h2>
+  <form onsubmit="event.preventDefault(); alert('Preview only: values would be saved on the ESP32.');">
+    <label><input type="checkbox" checked> Use CAN bus</label>
+    <span class="hint">(default: checked)</span><br>
+    <label><input type="checkbox" checked> Use pedal shifters</label>
+    <span class="hint">(default: checked)</span><br>
+    <label><input type="checkbox"> Use 0.96 OLED</label>
+    <span class="hint">(default: unchecked)</span>
+
+    <h3>D1</h3>
+    <fieldset><legend>Upshift:</legend>
+      <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="80"> </label><span class="hint">(0-255; default: 80)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="90"> </label><span class="hint">(0-255; default: 90)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+
+    <h3>D2</h3>
+    <fieldset><legend>Upshift:</legend>
+      <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="80"> </label><span class="hint">(0-255; default: 80)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="80"> </label><span class="hint">(0-255; default: 80)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="700"></label><span class="hint">(default: 700 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="40"> </label><span class="hint">(0-255; default: 40)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="40"> </label><span class="hint">(0-255; default: 40)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+
+    <h3>D3</h3>
+    <fieldset><legend>Upshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="1200"></label><span class="hint">(default: 1200 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="90"> </label><span class="hint">(0-255; default: 90)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="100"> </label><span class="hint">(0-255; default: 100)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="180"> </label><span class="hint">(0-255; default: 180)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="180"> </label><span class="hint">(0-255; default: 180)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+
+    <h3>D4</h3>
+    <fieldset><legend>Upshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="100"> </label><span class="hint">(0-255; default: 100)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="120"> </label><span class="hint">(0-255; default: 120)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="140"> </label><span class="hint">(0-255; default: 140)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="140"> </label><span class="hint">(0-255; default: 140)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+
+    <h3>D5</h3>
+    <fieldset><legend>Upshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="400"></label><span class="hint">(default: 400 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="25"> </label><span class="hint">(0-255; default: 25)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="255"> </label><span class="hint">(0-255; default: 255)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="140"> </label><span class="hint">(0-255; default: 140)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="140"> </label><span class="hint">(0-255; default: 140)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+
+    <h3>D5+</h3>
+    <fieldset><legend>Upshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <fieldset><legend>Downshift:</legend>
+        <label>Delay: <input type="number" min="300" max="1500" value="400"></label><span class="hint">(default: 400 ms)</span><br>
+      <label>LinePressure: <input type="number" min="0" max="255" value="15"> </label><span class="hint">(0-255; default: 15)</span><br>
+      <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+    </fieldset>
+    <div class="actions">
+      <input type="submit" value="Save">
+      <button type="button" onclick="alert('Preview only: defaults would be restored on the ESP32.');">Reset</button>
+    </div>
+  </form>
+
+  <div class="import-export">
+    <h3>Import / Export</h3>
+    <button type="button" onclick="alert('Preview only: the ESP32 would download config.json.');">Download current config.json</button>
+    <form onsubmit="event.preventDefault(); alert('Preview only: the selected JSON would be imported on the ESP32.');">
+      <input type="file" accept=".json,application/json" required>
+      <input type="submit" value="Import JSON">
+    </form>
+  </div>
+</body>
+</html>

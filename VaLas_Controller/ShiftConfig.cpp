@@ -28,10 +28,14 @@ static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
 static bool g_defaultUseLargeDisplay = false;
 static bool g_defaultUseCanBus = false;
 static bool g_defaultUsePedalShifters = false;
+static File g_importFile;
 
 static void handleRoot();
 static void handleSave();
 static void handleReset();
+static void handleExport();
+static void handleImport();
+static void handleImportUpload();
 static void initDefaultSettings();
 
 ShiftConfig::ShiftConfig()
@@ -85,6 +89,8 @@ void ShiftConfig::execute(void * parameter)
     webServer.on("/", HTTP_GET, handleRoot);
     webServer.on("/save", HTTP_POST, handleSave);
     webServer.on("/reset", HTTP_POST, handleReset);
+    webServer.on("/export", HTTP_GET, handleExport);
+    webServer.on("/import", HTTP_POST, handleImport, handleImportUpload);
     webServer.begin();
     webServerInitialized = true;
 
@@ -331,7 +337,8 @@ static void handleRoot()
 
   String html;
   html.reserve(4096);
-  html += F("<html><head><meta charset='utf-8'><title>VaLas Shift Config</title></head><body>");
+  html += F("<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>VaLas Shift Config</title>");
+  html += F("<style>body{font-family:Arial,sans-serif;max-width:450px;margin:24px auto;padding:0 16px;color:#222}fieldset{margin:10px 0;padding:8px 10px}.setting-row{display:grid;grid-template-columns:275px 5rem minmax(110px,1fr);gap:6px;align-items:center;margin:4px 0}.setting-row label{min-width:0}.setting-row input{box-sizing:border-box;width:5rem}.setting-row .hint{font-size:.9em;color:#555}.config-actions{margin-top:14px}@media(max-width:450px){body{margin:10px auto;padding:0 8px;font-size:14px}h2{font-size:1.35em}h3{font-size:1.1em}.setting-row{grid-template-columns:minmax(0,1fr) 5rem}.setting-row .hint{grid-column:1 / -1;margin:-2px 0 2px 2px}}</style></head><body>");
   html += F("<h2>Shift Config Editor</h2>");
   html += F("<form method='POST' action='/save'>");
 
@@ -365,19 +372,27 @@ static void handleRoot()
     html += s.Name;
     html += "</h3>";
 
-  html += "UpshiftDelay: <input size='4' name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'> (default: " + String(d.UpshiftDelay) + ")<br>";
-  html += "UpshiftLinePressure: <input size='4' name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'> (default: " + String(d.UpshiftLinePressure) + ")<br>";
-  html += "UpshiftShiftPressure: <input size='4' name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'> (default: " + String(d.UpshiftShiftPressure) + ")<br>";
-  html += "UpshiftTorqueConverterLockup: <input size='4' name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'> (default: " + String(d.UpshiftTorqueConverterLockup) + ")<br>";
+  html += F("<fieldset><legend>Upshift:</legend>");
+  html += "<div class='setting-row'><label>Delay:</label><input type='number' min='300' max='1500' name='u" + String(i) + "d' value='" + String(s.UpshiftDelay) + "'><span class='hint'>ms (default: " + String(d.UpshiftDelay) + " ms)</span></div>";
+  html += "<div class='setting-row'><label>LinePressure:</label><input type='number' min='0' max='255' name='u" + String(i) + "lp' value='" + String(s.UpshiftLinePressure) + "'><span class='hint'>0-255 (default: " + String(d.UpshiftLinePressure) + ")</span></div>";
+  html += "<div class='setting-row'><label>ShiftPressure:</label><input type='number' min='0' max='255' name='u" + String(i) + "sp' value='" + String(s.UpshiftShiftPressure) + "'><span class='hint'>0-255 (default: " + String(d.UpshiftShiftPressure) + ")</span></div>";
+  html += "<div class='setting-row'><label>TorqueConverterLockup:</label><input type='number' min='0' max='255' name='u" + String(i) + "tc' value='" + String(s.UpshiftTorqueConverterLockup) + "'><span class='hint'>0-255 (default: " + String(d.UpshiftTorqueConverterLockup) + ")</span></div></fieldset>";
 
-  html += "DownshiftDelay: <input size='4' name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'> (default: " + String(d.DownshiftDelay) + ")<br>";
-  html += "DownshiftLinePressure: <input size='4' name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'> (default: " + String(d.DownshiftLinePressure) + ")<br>";
-  html += "DownshiftShiftPressure: <input size='4' name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'> (default: " + String(d.DownshiftShiftPressure) + ")<br>";
-  html += "DownshiftTorqueConverterLockup: <input size='4' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'> (default: " + String(d.DownshiftTorqueConverterLockup) + ")<br><hr>";
+  html += F("<fieldset><legend>Downshift:</legend>");
+  html += "<div class='setting-row'><label>Delay:</label><input type='number' min='300' max='1500' name='d" + String(i) + "d' value='" + String(s.DownshiftDelay) + "'><span class='hint'>ms (default: " + String(d.DownshiftDelay) + " ms)</span></div>";
+  html += "<div class='setting-row'><label>LinePressure:</label><input type='number' min='0' max='255' name='d" + String(i) + "lp' value='" + String(s.DownshiftLinePressure) + "'><span class='hint'>0-255 (default: " + String(d.DownshiftLinePressure) + ")</span></div>";
+  html += "<div class='setting-row'><label>ShiftPressure:</label><input type='number' min='0' max='255' name='d" + String(i) + "sp' value='" + String(s.DownshiftShiftPressure) + "'><span class='hint'>0-255 (default: " + String(d.DownshiftShiftPressure) + ")</span></div>";
+  html += "<div class='setting-row'><label>TorqueConverterLockup:</label><input type='number' min='0' max='255' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'><span class='hint'>0-255 (default: " + String(d.DownshiftTorqueConverterLockup) + ")</span></div></fieldset><hr>";
   }
 
   html += F("<input type='submit' value='Save'>");
   html += F(" <button type='button' onclick=\"if(confirm('Are you sure you want to reset to defaults?')){fetch('/reset',{method:'POST'}).then(()=>window.location.reload());}\">Reset</button>");
+  html += F("</form>");
+  html += F("<hr><h3>Import / Export</h3>");
+  html += F("<form method='GET' action='/export'><button type='submit'>Download current config.json</button></form>");
+  html += F("<form method='POST' action='/import' enctype='multipart/form-data'>");
+  html += F("<input type='file' name='config' accept='.json,application/json' required>");
+  html += F(" <input type='submit' value='Import JSON'>");
   html += F("</form>");
   html += F("<script>// Prevent form resubmission on reload\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
@@ -475,6 +490,85 @@ static void handleSave()
   webServer.sendHeader("Connection", "close");
   webServer.sendHeader("Location", "/");
   webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
+}
+
+static void handleExport()
+{
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  StaticJsonDocument<2048> doc = shiftConfig.createJsonFromObject(
+    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr);
+  String json;
+  serializeJsonPretty(doc, json);
+  webServer.sendHeader("Content-Disposition", "attachment; filename=config.json");
+  webServer.send(200, "application/json", json);
+}
+
+static void handleImportUpload()
+{
+  HTTPUpload& upload = webServer.upload();
+
+  if (upload.status == UPLOAD_FILE_START)
+  {
+    if (g_importFile)
+      g_importFile.close();
+    g_importFile = SPIFFS.open("/import.json", "w");
+  }
+  else if (upload.status == UPLOAD_FILE_WRITE)
+  {
+    if (g_importFile)
+      g_importFile.write(upload.buf, upload.currentSize);
+  }
+  else if (upload.status == UPLOAD_FILE_END)
+  {
+    if (g_importFile)
+      g_importFile.close();
+  }
+}
+
+static void handleImport()
+{
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr)
+  {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  if (g_importFile)
+    g_importFile.close();
+
+  File file = SPIFFS.open("/import.json", "r");
+  if (!file)
+  {
+    webServer.send(400, "text/plain", "Import failed: no JSON file received");
+    return;
+  }
+
+  StaticJsonDocument<2048> doc;
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+  SPIFFS.remove("/import.json");
+
+  if (error || !doc["GearShiftSettings"].is<JsonArray>() || doc["GearShiftSettings"].size() != 6)
+  {
+    webServer.send(400, "text/plain", "Import failed: invalid config.json format");
+    return;
+  }
+
+  ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, doc);
+  if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr))
+  {
+    webServer.send(500, "text/plain", "Import failed: could not save configuration");
+    return;
+  }
+
+  webServer.sendHeader("Connection", "close");
+  webServer.sendHeader("Location", "/");
+  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Configuration imported. Please reboot manually.</body></html>");
 }
 
 // Helper to initialize the static default settings
