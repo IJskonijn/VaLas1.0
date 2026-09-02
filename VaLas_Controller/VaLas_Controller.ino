@@ -248,7 +248,16 @@ void shiftControlHandlerTask(void* parameter){
 }
 
 void displayHandlerTask(void* parameter){
+  int displayReinitCounter = 0;
+
   for(;;){
+    if (++displayReinitCounter >= 300)
+    {
+      Serial.println("Reinitializing OLED display");
+      displayHandler.begin();
+      displayReinitCounter = 0;
+    }
+
     displayHandler.execute(parameter);
     vTaskDelay(200 / portTICK_PERIOD_MS);
   }

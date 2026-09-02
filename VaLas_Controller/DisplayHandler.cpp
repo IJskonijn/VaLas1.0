@@ -27,11 +27,12 @@ void DisplayHandler::begin()
   Serial.println("Is using 0.96 OLED: " + is096oled);
   Serial.println("Using display y coordinate: " + String(u8g2_y_coordinate));
 
-//  Wire.begin(21, 22);
-//  pinMode(21, INPUT_PULLUP);  // SDA
-//  pinMode(22, INPUT_PULLUP);  // SCL
+  // Use the same pins as the ESP32 default, but initialize them explicitly so
+  // the display remains independent of board-core defaults.
+  Wire.begin(21, 22);
+  Wire.setTimeOut(100);
   
-  Wire.setClock(20000);  // 50 kHz, lower clock speed for better stability over longer wires
+  Wire.setClock(20000);  // Lower clock speed for better stability over longer wires
   u8g2.begin();
 }
 
