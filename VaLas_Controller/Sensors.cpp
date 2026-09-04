@@ -108,6 +108,15 @@ int Sensors::ReadRpm()
   }
 }
 
+int Sensors::ReadThrottlePosition()
+{
+    int throttlePosition = 0;
+    if (read_throttle_position(&throttlePosition)) {
+        return throttlePosition;
+    }
+    return 0;
+}
+
 typedef struct {
     uint16_t v;  // Voltage in mV
     int temp;    // ATF Temp in degrees C * 10
@@ -211,6 +220,26 @@ bool Sensors::read_atf_temp(int* dest){
         }
         return true;
     }
+}
+
+bool Sensors::read_throttle_position(int* dest) {
+#if PIN_THROTTLE_POSITION < 0
+    (void)dest;
+    return false;
+#else
+    const uint8_t sampleCount = 5;
+    uint32_t average = 0;
+
+    for (uint8_t i = 0; i < sampleCount; i++) {
+        average += analogRead(PIN_THROTTLE_POSITION);
+    }
+    average /= sampleCount;
+
+    // Return a board-independent percentage. Sensor min/max calibration can be
+    // added later if the pedal does not use the full ADC range.
+    *dest = constrain((average * 100UL) / 4095UL, 0, 100);
+    return true;
+#endif
 }
 
 // Engine RPM Configuration and Reading Functions

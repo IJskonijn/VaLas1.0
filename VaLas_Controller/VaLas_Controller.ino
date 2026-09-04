@@ -38,7 +38,8 @@ Gearlever* gearLeverInterface;
 
 bool initial_UseCanBus = true; // Default is false
 bool initial_UsePedalShifters = true; // Default is false
-bool initial_UseLargeDisplay = false; // Default is false
+bool initial_UseLargeDisplay = true; // Default is false
+bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 
@@ -54,6 +55,7 @@ int initial_N2Rpm;
 int initial_N3Rpm;
 int initial_CalculatedRpm;
 int initial_EngineRpm;
+int initial_ThrottlePosition;
 
 /////
 
@@ -78,6 +80,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_UseCanBus,
   &initial_UsePedalShifters,
   &initial_UseLargeDisplay,
+  &initial_UseThrottlePosition,
   initial_GearboxSettingsPtr
 };
 
@@ -95,7 +98,9 @@ TaskStructs::SensorParameters sensorParameters
   &initial_AtfTemp,
   &initial_N2Rpm,
   &initial_N3Rpm,
-  &initial_CalculatedRpm
+  &initial_CalculatedRpm,
+  &initial_ThrottlePosition,
+  &initial_UseThrottlePosition
 };
 
 /////
@@ -114,6 +119,8 @@ void setup()
   initial_N3Rpm = 0;
   initial_CalculatedRpm = 0;
   initial_EngineRpm = 0;
+  initial_ThrottlePosition = 0;
+  initial_UseThrottlePosition = false;
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
@@ -141,6 +148,9 @@ void setup()
   
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
+#if PIN_THROTTLE_POSITION >= 0
+  pinMode(PIN_THROTTLE_POSITION, INPUT);
+#endif
 
   pinMode(startRelayPin, OUTPUT);
   digitalWrite(startRelayPin, LOW);
@@ -169,7 +179,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition);
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN(&initial_UsePedalShifters);
@@ -293,6 +303,11 @@ void sensorHandlerTask(void* parameter){
     // Read engine RPM for diagnostics/display data; optional gauge output is disabled.
     int engineRpm = sensors.ReadEngineRpm();
     initial_EngineRpm = engineRpm; // Update global engine RPM variable
+
+    int throttlePosition = 0;
+    if (*(params->useThrottlePositionPtr) && sensors.read_throttle_position(&throttlePosition)) {
+      *(params->throttlePositionPtr) = throttlePosition;
+    }
     
     vTaskDelay(500 / portTICK_PERIOD_MS); // Read sensors every 500ms
   }

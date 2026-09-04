@@ -38,6 +38,10 @@
 #define PIN_N2 gpio_num_t::GPIO_NUM_39 // N2 speed sensor
 #define PIN_N3 gpio_num_t::GPIO_NUM_34 // N3 speed sensor
 
+// Set to an unused ADC-capable GPIO to enable the optional throttle position sensor.
+// Leave disabled until the pin is selected; GPIO35 is already used by the ELR input.
+#define PIN_THROTTLE_POSITION -1
+
 // Engine RPM sensor and gauge output pins
 #define PIN_ENGINE_RPM gpio_num_t::GPIO_NUM_15 // Engine RPM sensor input
 #define PIN_RPM_GAUGE_OUT 2                    // RPM gauge output signal

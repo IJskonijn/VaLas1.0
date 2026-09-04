@@ -27,9 +27,10 @@ class TaskStructs {
 
         struct shiftConfigParameters
         {
-            bool* useLargeDisplayPtr;
             bool* useCanBusPtr;
             bool* usePedalShiftersPtr;
+            bool* useLargeDisplayPtr;
+            bool* useThrottlePositionPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
@@ -50,6 +51,8 @@ class TaskStructs {
             int* n2RpmPtr;
             int* n3RpmPtr;
             int* calculatedRpmPtr;
+            int* throttlePositionPtr;
+            bool* useThrottlePositionPtr;
         };
         typedef struct sensorParameters SensorParameters;
 		
