@@ -22,6 +22,9 @@ class TaskStructs {
             VaLas_Controller::GearLeverPosition* oldLeverPositionPtr;
             VaLas_Controller::ShiftRequest* currentShiftRequestPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
+            int* throttlePositionPtr;
+            bool* useThrottlePositionPtr;
+            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
         };
         typedef struct shiftControlParameters ShiftControlParameters;
 

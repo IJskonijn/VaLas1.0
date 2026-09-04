@@ -109,6 +109,18 @@ class VaLas_Controller {
       int DownshiftShiftPressure = 0;               //  SHIFT_PC   min-max 255-0
       int DownshiftTorqueConverterLockup = 0;       //  TCC        min-max 0-255
     }  ShiftSetting;
+
+    typedef struct
+    {
+      int closedAdc = 0;
+      int wideOpenAdc = 4095;
+      int lowThrottlePressurePercent = 70;
+      int mediumThrottlePressurePercent = 85;
+      int highThrottlePressurePercent = 100;
+      int lowThrottleDelayMs = 200;
+      int mediumThrottleDelayMs = 100;
+      int highThrottleDelayMs = 0;
+    } ThrottleSettings;
 		
 	private:
 };

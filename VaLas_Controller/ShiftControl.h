@@ -18,5 +18,8 @@ class ShiftControl {
 		void upShift(int customMpcAfterShift, VaLas_Controller::GearLeverPosition currentLeverPosition, int gear);
 		void select_fivetcc_to_five(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear);
 		void select_five_to_fivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear);
+		int getThrottlePressurePercent(int throttlePosition);
+		int getThrottleDelayMs(int throttlePosition);
+		int scalePressure(int pressure, int throttlePosition);
 };
 #endif

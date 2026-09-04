@@ -42,6 +42,7 @@ bool initial_UseLargeDisplay = true; // Default is false
 bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
+VaLas_Controller::ThrottleSettings initial_ThrottleSettings;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
 
@@ -72,7 +73,10 @@ TaskStructs::ShiftControlParameters shiftControlParameters
   &initial_CurrentLeverPosition,
   &initial_OldLeverPosition,
   &initial_CurrentShiftRequest,
-  initial_GearboxSettingsPtr
+  initial_GearboxSettingsPtr,
+  &initial_ThrottlePosition,
+  &initial_UseThrottlePosition,
+  &initial_ThrottleSettings
 };
 
 TaskStructs::ShiftConfigParameters shiftConfigParameters
@@ -179,7 +183,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleSettings);
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN(&initial_UsePedalShifters);
@@ -309,7 +313,7 @@ void sensorHandlerTask(void* parameter){
       *(params->throttlePositionPtr) = throttlePosition;
     }
     
-    vTaskDelay(500 / portTICK_PERIOD_MS); // Read sensors every 500ms
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Read sensors every 100ms
   }
 }
 
