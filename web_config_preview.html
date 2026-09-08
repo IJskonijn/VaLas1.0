@@ -36,6 +36,22 @@
     <label><input type="checkbox"> Use 0.96 OLED</label>
     <span class="hint">(default: unchecked)</span>
 
+    <br>
+    <label><input type="checkbox"> Use throttle position sensor</label>
+    <span class="hint">(default: unchecked)</span>
+
+    <br><br>
+    <fieldset>
+      <legend>TPS WIP tuning:</legend>
+      <label>0-50% pressure: <input type="number" min="0" max="100" value="70"></label><span class="hint">percent of default configuration (default: 70)</span><br>
+      <label>50-80% pressure: <input type="number" min="0" max="100" value="85"></label><span class="hint">percent of default configuration (default: 85)</span><br>
+      <label>80-100% pressure: <input type="number" min="0" max="100" value="100"></label><span class="hint">percent of default configuration (default: 100)</span><br>
+      <label>0-50% delay: <input type="number" min="0" max="500" value="200"></label><span class="hint">additional ms (default: 200)</span><br>
+      <label>50-80% delay: <input type="number" min="0" max="500" value="100"></label><span class="hint">additional ms (default: 100)</span><br>
+      <label>80-100% delay: <input type="number" min="0" max="500" value="0"></label><span class="hint">additional ms (default: 0)</span>
+    </fieldset>
+    <br><br>
+
     <h3>D1</h3>
     <fieldset><legend>Upshift:</legend>
       <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>

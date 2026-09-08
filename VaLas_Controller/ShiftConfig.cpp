@@ -392,15 +392,15 @@ static void handleRoot()
   html += F("> Use throttle position sensor</label>");
   html += " (default: ";
   html += g_defaultUseThrottlePosition ? "checked" : "unchecked";
-  html += ")<br><hr>";
+  html += ")<br><br>";
 
   html += F("<fieldset><legend>TPS WIP tuning:</legend>");
-  html += "<div class='setting-row'><label>0-50% pressure:</label><input type='number' min='0' max='100' name='tpsLowPressure' value='" + String(g_throttleSettingsPtr->lowThrottlePressurePercent) + "'><span class='hint'>percent of full-throttle pressure (default: 70)</span></div>";
-  html += "<div class='setting-row'><label>50-80% pressure:</label><input type='number' min='0' max='100' name='tpsMediumPressure' value='" + String(g_throttleSettingsPtr->mediumThrottlePressurePercent) + "'><span class='hint'>percent (default: 85)</span></div>";
-  html += "<div class='setting-row'><label>80-100% pressure:</label><input type='number' min='0' max='100' name='tpsHighPressure' value='" + String(g_throttleSettingsPtr->highThrottlePressurePercent) + "'><span class='hint'>percent (default: 100)</span></div>";
+  html += "<div class='setting-row'><label>0-50% pressure:</label><input type='number' min='0' max='100' name='tpsLowPressure' value='" + String(g_throttleSettingsPtr->lowThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 70)</span></div>";
+  html += "<div class='setting-row'><label>50-80% pressure:</label><input type='number' min='0' max='100' name='tpsMediumPressure' value='" + String(g_throttleSettingsPtr->mediumThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 85)</span></div>";
+  html += "<div class='setting-row'><label>80-100% pressure:</label><input type='number' min='0' max='100' name='tpsHighPressure' value='" + String(g_throttleSettingsPtr->highThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 100)</span></div>";
   html += "<div class='setting-row'><label>0-50% delay:</label><input type='number' min='0' max='500' name='tpsLowDelay' value='" + String(g_throttleSettingsPtr->lowThrottleDelayMs) + "'><span class='hint'>additional ms (default: 200)</span></div>";
   html += "<div class='setting-row'><label>50-80% delay:</label><input type='number' min='0' max='500' name='tpsMediumDelay' value='" + String(g_throttleSettingsPtr->mediumThrottleDelayMs) + "'><span class='hint'>additional ms (default: 100)</span></div>";
-  html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><hr>";
+  html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><br><br>";
   
   for (int i = 0; i < 6; i++)
   {
