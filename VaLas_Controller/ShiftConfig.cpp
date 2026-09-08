@@ -621,7 +621,7 @@ static void handleImport()
 // Helper to initialize the static default settings
 static void initDefaultSettings() {
   ShiftConfig::CreateDefaultConfig(g_defaultShiftSettings);
-  g_defaultUseLargeDisplay = false;
+  g_defaultUseLargeDisplay = true;
   g_defaultUseThrottlePosition = false;
   g_defaultUseCanBus = true;
   g_defaultUsePedalShifters = true;

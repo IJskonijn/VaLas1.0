@@ -85,7 +85,8 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_UsePedalShifters,
   &initial_UseLargeDisplay,
   &initial_UseThrottlePosition,
-  initial_GearboxSettingsPtr
+  initial_GearboxSettingsPtr,
+  &initial_ThrottleSettings
 };
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters

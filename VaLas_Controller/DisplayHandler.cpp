@@ -22,7 +22,7 @@ DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE) {
 
 void DisplayHandler::begin()
 {
-  String is096oled = u8g2_y_coordinate == 29 ? "true" : "false";
+  String is096oled = getDisplayIsLarge() ? "true" : "false";
   Serial.println("Init displayhandler");
   Serial.println("Is using 0.96 OLED: " + is096oled);
   Serial.println("Using display y coordinate: " + String(u8g2_y_coordinate));

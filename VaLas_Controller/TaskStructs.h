@@ -35,6 +35,7 @@ class TaskStructs {
             bool* useLargeDisplayPtr;
             bool* useThrottlePositionPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
+            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
 
