@@ -127,9 +127,6 @@ void setup()
   initial_ThrottlePosition = 0;
   initial_UseThrottlePosition = false;
 
-  displayHandler.begin();
-  displayHandler.DisplayStartupOnScreen();
-  
   // Configure engine RPM settings
   // Change these values based on your setup:
   // 
@@ -185,6 +182,9 @@ void setup()
   digitalWrite(tccPin, LOW);
   
   shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleSettings);
+
+  displayHandler.begin();
+  displayHandler.DisplayStartupOnScreen();
 
   if (initial_UseCanBus)
     gearLeverInterface = new Gearlever_CAN(&initial_UsePedalShifters);

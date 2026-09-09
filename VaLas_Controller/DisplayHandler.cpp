@@ -11,6 +11,10 @@ extern bool getDisplayIsLarge();
 // 128x64 for 0.96" OLED
 // 128x32 for 0.91" OLED
 DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE) {
+}
+
+void DisplayHandler::begin()
+{
   if (getDisplayIsLarge()) {
     u8g2_y_coordinate = 29;
     u8g2_selectedFont = u8g2_font_logisoso28_tr;
@@ -18,10 +22,7 @@ DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE) {
     u8g2_y_coordinate = 32;
     u8g2_selectedFont = u8g2_font_logisoso30_tr;
   }
-}
 
-void DisplayHandler::begin()
-{
   String is096oled = getDisplayIsLarge() ? "true" : "false";
   Serial.println("Init displayhandler");
   Serial.println("Is using 0.96 OLED: " + is096oled);
@@ -86,28 +87,22 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
   u8g2.drawStr(1, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
 
   // Draw ATF temp
-  if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Unknown)
+  if ((currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive || currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse) && atfTemp > -1)
+    atfTempToDisplay = String(atfTemp);
+
+  String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
+  Serial.println(tempVar);
+
+  if (getDisplayIsLarge())
   {
-    if (currentLeverPosition != VaLas_Controller::GearLeverPosition::Park && currentLeverPosition != VaLas_Controller::GearLeverPosition::Neutral)
-    {
-      if (atfTemp > -1)
-        atfTempToDisplay = String(atfTemp);
-    }
-
-    String tempVar = "ATF: " + atfTempToDisplay;// + String(" C");
-    Serial.println(tempVar);
-
-    if (getDisplayIsLarge())
-    {
-        u8g2.setFont(u8g2_font_logisoso18_tr);
-        u8g2.drawStr(10, 65, tempVar.c_str());
-    }
-    else
-    {
-        u8g2.setFont(u8g2_font_logisoso16_tr);
-        int atfWidth = u8g2.getStrWidth(tempVar.c_str());
-        u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
-    }
+      u8g2.setFont(u8g2_font_logisoso18_tr);
+      u8g2.drawStr(10, 62, tempVar.c_str());
+  }
+  else
+  {
+      u8g2.setFont(u8g2_font_logisoso16_tr);
+      int atfWidth = u8g2.getStrWidth(tempVar.c_str());
+      u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
   }
 }
 
