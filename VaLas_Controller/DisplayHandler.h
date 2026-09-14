@@ -18,11 +18,9 @@ class DisplayHandler {
 		int u8g2_y_coordinate;
 		const uint8_t* u8g2_selectedFont;
 
-	#if is_096_Oled
-		U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
-	#else
-		U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2;
-	#endif
+		U8G2_SSD1306_128X64_NONAME_F_HW_I2C largeDisplay;
+		U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C smallDisplay;
+		U8G2* activeDisplay;
 
 		void displayMainScreen(const VaLas_Controller::GearLeverPosition currentLeverPosition, const int currentGear, const int atfTemp);
 		void displayShifting();

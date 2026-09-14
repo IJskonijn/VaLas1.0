@@ -10,15 +10,20 @@ extern bool getDisplayIsLarge();
 
 // 128x64 for 0.96" OLED
 // 128x32 for 0.91" OLED
-DisplayHandler::DisplayHandler() : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE) {
+DisplayHandler::DisplayHandler()
+  : largeDisplay(U8G2_R0, /* reset=*/ U8X8_PIN_NONE),
+    smallDisplay(U8G2_R0, /* reset=*/ U8X8_PIN_NONE),
+    activeDisplay(nullptr) {
 }
 
 void DisplayHandler::begin()
 {
   if (getDisplayIsLarge()) {
+    activeDisplay = &largeDisplay;
     u8g2_y_coordinate = 29;
     u8g2_selectedFont = u8g2_font_logisoso28_tr;
   } else {
+    activeDisplay = &smallDisplay;
     u8g2_y_coordinate = 32;
     u8g2_selectedFont = u8g2_font_logisoso30_tr;
   }
@@ -34,7 +39,7 @@ void DisplayHandler::begin()
   Wire.setTimeOut(100);
   
   Wire.setClock(20000);  // Lower clock speed for better stability over longer wires
-  u8g2.begin();
+  activeDisplay->begin();
 }
 
 void DisplayHandler::execute(void * parameter)
@@ -45,16 +50,16 @@ void DisplayHandler::execute(void * parameter)
   int currentGear = *(parameters->currentGearPtr);
   int atfTemp = *(parameters->atfTempPtr);
 
-  u8g2.clearBuffer();
+  activeDisplay->clearBuffer();
   
   switch (screenToDisplay){
     case VaLas_Controller::DisplayScreen::Main:
       displayMainScreen(currentLeverPosition, currentGear, atfTemp);
-      u8g2.sendBuffer();
+      activeDisplay->sendBuffer();
       break;
     case VaLas_Controller::DisplayScreen::Shifting:
       displayShifting();
-      u8g2.sendBuffer();
+      activeDisplay->sendBuffer();
       vTaskDelay(500);
       break;
   }
@@ -62,17 +67,17 @@ void DisplayHandler::execute(void * parameter)
 
 void DisplayHandler::DisplayStartupOnScreen()
 {
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_selectedFont);
-  u8g2.drawStr(1, u8g2_y_coordinate, "VaLas");
-  u8g2.sendBuffer();
+  activeDisplay->clearBuffer();
+  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->drawStr(1, u8g2_y_coordinate, "VaLas");
+  activeDisplay->sendBuffer();
   
   vTaskDelay(1000); // delay(1500);
 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_selectedFont);
-  u8g2.drawStr(1, u8g2_y_coordinate, "Ver. 1.1");
-  u8g2.sendBuffer();
+  activeDisplay->clearBuffer();
+  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->drawStr(1, u8g2_y_coordinate, "Ver. 1.1");
+  activeDisplay->sendBuffer();
 
   vTaskDelay(1000); // delay(1500);
 }
@@ -83,8 +88,8 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
   String atfTempToDisplay = String("-");
 
   // Draw gear      
-  u8g2.setFont(u8g2_selectedFont);
-  u8g2.drawStr(1, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
+  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->drawStr(1, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
 
   // Draw ATF temp
   if ((currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive || currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse) && atfTemp > -1)
@@ -95,21 +100,21 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
 
   if (getDisplayIsLarge())
   {
-      u8g2.setFont(u8g2_font_logisoso18_tr);
-      u8g2.drawStr(10, 62, tempVar.c_str());
+      activeDisplay->setFont(u8g2_font_logisoso18_tr);
+      activeDisplay->drawStr(10, 62, tempVar.c_str());
   }
   else
   {
-      u8g2.setFont(u8g2_font_logisoso16_tr);
-      int atfWidth = u8g2.getStrWidth(tempVar.c_str());
-      u8g2.drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
+      activeDisplay->setFont(u8g2_font_logisoso16_tr);
+      int atfWidth = activeDisplay->getStrWidth(tempVar.c_str());
+      activeDisplay->drawStr(128 - atfWidth - 2, 26, tempVar.c_str());  // 2px marge van rechterrand
   }
 }
 
 void DisplayHandler::displayShifting()
 {
-  u8g2.setFont(u8g2_selectedFont);
-  u8g2.drawStr(1, u8g2_y_coordinate, " SHIFT");
+  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->drawStr(1, u8g2_y_coordinate, " SHIFT");
 }
 
 const String DisplayHandler::ToString(const VaLas_Controller::GearLeverPosition leverPosition)
