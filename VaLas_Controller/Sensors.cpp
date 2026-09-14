@@ -111,10 +111,26 @@ int Sensors::ReadRpm()
 int Sensors::ReadThrottlePosition()
 {
     int throttlePosition = 0;
-    if (read_throttle_position(&throttlePosition)) {
+    VaLas_Controller::ThrottleSettings settings;
+    if (read_throttle_position(&throttlePosition, settings)) {
         return throttlePosition;
     }
-    return 0;
+    return -1;
+}
+
+int Sensors::ReadThrottleAdc()
+{
+#if PIN_THROTTLE_POSITION < 0
+    return -1;
+#else
+    const uint8_t sampleCount = 5;
+    uint32_t average = 0;
+
+    for (uint8_t i = 0; i < sampleCount; i++) {
+        average += analogRead(PIN_THROTTLE_POSITION);
+    }
+    return average / sampleCount;
+#endif
 }
 
 typedef struct {
@@ -222,24 +238,15 @@ bool Sensors::read_atf_temp(int* dest){
     }
 }
 
-bool Sensors::read_throttle_position(int* dest) {
-#if PIN_THROTTLE_POSITION < 0
-    (void)dest;
-    return false;
-#else
-    const uint8_t sampleCount = 5;
-    uint32_t average = 0;
-
-    for (uint8_t i = 0; i < sampleCount; i++) {
-        average += analogRead(PIN_THROTTLE_POSITION);
+bool Sensors::read_throttle_position(int* dest, const VaLas_Controller::ThrottleSettings& settings) {
+    int rawAdc = ReadThrottleAdc();
+    if (rawAdc < 0 || settings.wideOpenAdc <= settings.closedAdc ||
+        settings.wideOpenAdc - settings.closedAdc < 100) {
+        return false;
     }
-    average /= sampleCount;
 
-    // Return a board-independent percentage. Sensor min/max calibration can be
-    // added later if the pedal does not use the full ADC range.
-    *dest = constrain((average * 100UL) / 4095UL, 0, 100);
+    *dest = constrain(map(rawAdc, settings.closedAdc, settings.wideOpenAdc, 0, 100), 0, 100);
     return true;
-#endif
 }
 
 // Engine RPM Configuration and Reading Functions

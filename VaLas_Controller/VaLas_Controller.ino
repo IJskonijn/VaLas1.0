@@ -105,7 +105,8 @@ TaskStructs::SensorParameters sensorParameters
   &initial_N3Rpm,
   &initial_CalculatedRpm,
   &initial_ThrottlePosition,
-  &initial_UseThrottlePosition
+  &initial_UseThrottlePosition,
+  &initial_ThrottleSettings
 };
 
 /////
@@ -124,7 +125,7 @@ void setup()
   initial_N3Rpm = 0;
   initial_CalculatedRpm = 0;
   initial_EngineRpm = 0;
-  initial_ThrottlePosition = 0;
+  initial_ThrottlePosition = -1;
   initial_UseThrottlePosition = false;
 
   // Configure engine RPM settings
@@ -310,8 +311,12 @@ void sensorHandlerTask(void* parameter){
     initial_EngineRpm = engineRpm; // Update global engine RPM variable
 
     int throttlePosition = 0;
-    if (*(params->useThrottlePositionPtr) && sensors.read_throttle_position(&throttlePosition)) {
-      *(params->throttlePositionPtr) = throttlePosition;
+    if (*(params->useThrottlePositionPtr)) {
+      if (sensors.read_throttle_position(&throttlePosition, *(params->throttleSettingsPtr))) {
+        *(params->throttlePositionPtr) = throttlePosition;
+      } else {
+        *(params->throttlePositionPtr) = -1;
+      }
     }
     
     vTaskDelay(100 / portTICK_PERIOD_MS); // Read sensors every 100ms

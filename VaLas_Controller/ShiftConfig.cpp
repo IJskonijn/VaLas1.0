@@ -5,6 +5,7 @@
 #include "SPIFFS.h"
 #include "ShiftConfig.h"
 #include "VaLas_Controller.h"
+#include "Sensors.h"
 #include <WiFi.h>
 #include <ESP32WebServer.h>
 
@@ -39,7 +40,11 @@ static void handleReset();
 static void handleExport();
 static void handleImport();
 static void handleImportUpload();
+static void handleCalibrateClosed();
+static void handleCalibrateWideOpen();
 static void initDefaultSettings();
+
+extern Sensors sensors;
 
 ShiftConfig::ShiftConfig()
 {
@@ -98,6 +103,8 @@ void ShiftConfig::execute(void * parameter)
     webServer.on("/reset", HTTP_POST, handleReset);
     webServer.on("/export", HTTP_GET, handleExport);
     webServer.on("/import", HTTP_POST, handleImport, handleImportUpload);
+    webServer.on("/calibrate/closed", HTTP_POST, handleCalibrateClosed);
+    webServer.on("/calibrate/wide-open", HTTP_POST, handleCalibrateWideOpen);
     webServer.begin();
     webServerInitialized = true;
 
@@ -177,6 +184,8 @@ StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
   doc["UsePedalShifters"] = *usePedalShiftersPtr;
   doc["UseLargeDisplay"] = *useLargeDisplayPtr;
   doc["UseThrottlePosition"] = *useThrottlePositionPtr;
+  doc["TpsClosedAdc"] = throttleSettingsPtr->closedAdc;
+  doc["TpsWideOpenAdc"] = throttleSettingsPtr->wideOpenAdc;
   doc["TpsLowPressurePercent"] = throttleSettingsPtr->lowThrottlePressurePercent;
   doc["TpsMediumPressurePercent"] = throttleSettingsPtr->mediumThrottlePressurePercent;
   doc["TpsHighPressurePercent"] = throttleSettingsPtr->highThrottlePressurePercent;
@@ -211,6 +220,8 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
   *usePedalShiftersPtr = doc["UsePedalShifters"].as<bool>();
   *useLargeDisplayPtr = doc["UseLargeDisplay"].as<bool>();
   *useThrottlePositionPtr = doc["UseThrottlePosition"].as<bool>();
+  throttleSettingsPtr->closedAdc = doc["TpsClosedAdc"] | 0;
+  throttleSettingsPtr->wideOpenAdc = doc["TpsWideOpenAdc"] | 4095;
   throttleSettingsPtr->lowThrottlePressurePercent = doc["TpsLowPressurePercent"] | 70;
   throttleSettingsPtr->mediumThrottlePressurePercent = doc["TpsMediumPressurePercent"] | 85;
   throttleSettingsPtr->highThrottlePressurePercent = doc["TpsHighPressurePercent"] | 100;
@@ -387,21 +398,13 @@ static void handleRoot()
   html += g_defaultUseLargeDisplay ? "checked" : "unchecked";
   html += ")<br><hr>";
 
-  html += F("<label><input type='checkbox' name='useThrottlePosition'");
+  html += F("<label><input type='checkbox' id='useThrottlePosition' name='useThrottlePosition' onchange='toggleTpsWipTuning()'");
   if (*g_useThrottlePositionPtr) html += F(" checked");
   html += F("> Use throttle position sensor</label>");
   html += " (default: ";
   html += g_defaultUseThrottlePosition ? "checked" : "unchecked";
   html += ")<br><br>";
 
-  html += F("<fieldset><legend>TPS WIP tuning:</legend>");
-  html += "<div class='setting-row'><label>0-50% pressure:</label><input type='number' min='0' max='100' name='tpsLowPressure' value='" + String(g_throttleSettingsPtr->lowThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 70)</span></div>";
-  html += "<div class='setting-row'><label>50-80% pressure:</label><input type='number' min='0' max='100' name='tpsMediumPressure' value='" + String(g_throttleSettingsPtr->mediumThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 85)</span></div>";
-  html += "<div class='setting-row'><label>80-100% pressure:</label><input type='number' min='0' max='100' name='tpsHighPressure' value='" + String(g_throttleSettingsPtr->highThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 100)</span></div>";
-  html += "<div class='setting-row'><label>0-50% delay:</label><input type='number' min='0' max='500' name='tpsLowDelay' value='" + String(g_throttleSettingsPtr->lowThrottleDelayMs) + "'><span class='hint'>additional ms (default: 200)</span></div>";
-  html += "<div class='setting-row'><label>50-80% delay:</label><input type='number' min='0' max='500' name='tpsMediumDelay' value='" + String(g_throttleSettingsPtr->mediumThrottleDelayMs) + "'><span class='hint'>additional ms (default: 100)</span></div>";
-  html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><br><br>";
-  
   for (int i = 0; i < 6; i++)
   {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
@@ -423,6 +426,19 @@ static void handleRoot()
   html += "<div class='setting-row'><label>TorqueConverterLockup:</label><input type='number' min='0' max='255' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'><span class='hint'>0-255 (default: " + String(d.DownshiftTorqueConverterLockup) + ")</span></div></fieldset><hr>";
   }
 
+  html += *g_useThrottlePositionPtr ? F("<fieldset id='tpsWipTuning'><legend>TPS WIP tuning:</legend>") : F("<fieldset id='tpsWipTuning' style='display:none'><legend>TPS WIP tuning:</legend>");
+  int currentThrottleAdc = sensors.ReadThrottleAdc();
+  html += "<div class='setting-row'><label>Current ADC:</label><span>" + String(currentThrottleAdc) + "</span><span class='hint'>move pedal before refreshing</span></div>";
+  html += "<div class='setting-row'><label>Closed throttle ADC:</label><input type='number' min='0' max='4095' name='tpsClosedAdc' value='" + String(g_throttleSettingsPtr->closedAdc) + "'><span class='hint'><button type='button' onclick=\"fetch('/calibrate/closed',{method:'POST'}).then(()=>window.location.reload());\">Set current</button></span></div>";
+  html += "<div class='setting-row'><label>Wide-open throttle ADC:</label><input type='number' min='0' max='4095' name='tpsWideOpenAdc' value='" + String(g_throttleSettingsPtr->wideOpenAdc) + "'><span class='hint'><button type='button' onclick=\"fetch('/calibrate/wide-open',{method:'POST'}).then(()=>window.location.reload());\">Set current</button></span></div>";
+  html += "<br>";
+  html += "<div class='setting-row'><label>0-50% pressure:</label><input type='number' min='0' max='100' name='tpsLowPressure' value='" + String(g_throttleSettingsPtr->lowThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 70)</span></div>";
+  html += "<div class='setting-row'><label>50-80% pressure:</label><input type='number' min='0' max='100' name='tpsMediumPressure' value='" + String(g_throttleSettingsPtr->mediumThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 85)</span></div>";
+  html += "<div class='setting-row'><label>80-100% pressure:</label><input type='number' min='0' max='100' name='tpsHighPressure' value='" + String(g_throttleSettingsPtr->highThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 100)</span></div>";
+  html += "<div class='setting-row'><label>0-50% delay:</label><input type='number' min='0' max='500' name='tpsLowDelay' value='" + String(g_throttleSettingsPtr->lowThrottleDelayMs) + "'><span class='hint'>additional ms (default: 200)</span></div>";
+  html += "<div class='setting-row'><label>50-80% delay:</label><input type='number' min='0' max='500' name='tpsMediumDelay' value='" + String(g_throttleSettingsPtr->mediumThrottleDelayMs) + "'><span class='hint'>additional ms (default: 100)</span></div>";
+  html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><br><br>";
+
   html += F("<input type='submit' value='Save'>");
   html += F(" <button type='button' onclick=\"if(confirm('Are you sure you want to reset to defaults?')){fetch('/reset',{method:'POST'}).then(()=>window.location.reload());}\">Reset</button>");
   html += F("</form>");
@@ -432,7 +448,7 @@ static void handleRoot()
   html += F("<input type='file' name='config' accept='.json,application/json' required>");
   html += F(" <input type='submit' value='Import JSON'>");
   html += F("</form>");
-  html += F("<script>// Prevent form resubmission on reload\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
+  html += F("<script>function toggleTpsWipTuning(){document.getElementById('tpsWipTuning').style.display=document.getElementById('useThrottlePosition').checked?'':'none';}\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
 
   webServer.send(200, "text/html", html);
@@ -492,6 +508,8 @@ static void handleSave()
   *g_usePedalShiftersPtr = webServer.hasArg("usePedalShifters");
   *g_useLargeDisplayPtr = webServer.hasArg("useLargeDisplay");
   *g_useThrottlePositionPtr = webServer.hasArg("useThrottlePosition");
+  if (webServer.hasArg("tpsClosedAdc")) g_throttleSettingsPtr->closedAdc = constrain(webServer.arg("tpsClosedAdc").toInt(), 0, 4095);
+  if (webServer.hasArg("tpsWideOpenAdc")) g_throttleSettingsPtr->wideOpenAdc = constrain(webServer.arg("tpsWideOpenAdc").toInt(), 0, 4095);
   if (webServer.hasArg("tpsLowPressure")) g_throttleSettingsPtr->lowThrottlePressurePercent = webServer.arg("tpsLowPressure").toInt();
   if (webServer.hasArg("tpsMediumPressure")) g_throttleSettingsPtr->mediumThrottlePressurePercent = webServer.arg("tpsMediumPressure").toInt();
   if (webServer.hasArg("tpsHighPressure")) g_throttleSettingsPtr->highThrottlePressurePercent = webServer.arg("tpsHighPressure").toInt();
@@ -616,6 +634,42 @@ static void handleImport()
   webServer.sendHeader("Connection", "close");
   webServer.sendHeader("Location", "/");
   webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Configuration imported. Please reboot manually.</body></html>");
+}
+
+static void handleCalibrateClosed()
+{
+  if (!g_throttleSettingsPtr) {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  int rawAdc = sensors.ReadThrottleAdc();
+  if (rawAdc < 0) {
+    webServer.send(400, "text/plain", "TPS pin is disabled or unavailable");
+    return;
+  }
+
+  g_throttleSettingsPtr->closedAdc = rawAdc;
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  webServer.send(200, "text/plain", "Closed throttle calibration saved");
+}
+
+static void handleCalibrateWideOpen()
+{
+  if (!g_throttleSettingsPtr) {
+    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    return;
+  }
+
+  int rawAdc = sensors.ReadThrottleAdc();
+  if (rawAdc < 0) {
+    webServer.send(400, "text/plain", "TPS pin is disabled or unavailable");
+    return;
+  }
+
+  g_throttleSettingsPtr->wideOpenAdc = rawAdc;
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  webServer.send(200, "text/plain", "Wide-open throttle calibration saved");
 }
 
 // Helper to initialize the static default settings

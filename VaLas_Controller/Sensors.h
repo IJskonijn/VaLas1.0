@@ -11,11 +11,12 @@ class Sensors {
         int ReadRpm();  // Returns transmission RPM (from N2/N3 sensors)
         int ReadEngineRpm(); // Returns engine RPM (from crankshaft sensor)
         int ReadThrottlePosition(); // Returns optional throttle position as 0-100 percent
+        int ReadThrottleAdc(); // Returns averaged raw TPS ADC value, or -1 when unavailable
         void SetEngineConfig(VaLas_Controller::EngineType engineType, VaLas_Controller::RpmGaugeType gaugeType);
         void OutputRpmToGauge(int engineRpm); // Outputs correct signal to RPM gauge
         bool read_input_rpm(int& n2Rpm, int& n3Rpm, int& calcRpm, bool check_sanity);
         bool read_atf_temp(int* dest);
-        bool read_throttle_position(int* dest); // Reads and averages optional throttle position
+        bool read_throttle_position(int* dest, const VaLas_Controller::ThrottleSettings& settings); // Reads and calibrates optional throttle position
         bool read_engine_rpm(int* engineRpm); // Raw engine RPM reading
 		
 	private:

@@ -37,20 +37,8 @@
     <span class="hint">(default: unchecked)</span>
 
     <br>
-    <label><input type="checkbox"> Use throttle position sensor</label>
+    <label><input type="checkbox" id="useThrottlePosition" onchange="toggleTpsWipTuning()"> Use throttle position sensor</label>
     <span class="hint">(default: unchecked)</span>
-
-    <br><br>
-    <fieldset>
-      <legend>TPS WIP tuning:</legend>
-      <label>0-50% pressure: <input type="number" min="0" max="100" value="70"></label><span class="hint">percent of default configuration (default: 70)</span><br>
-      <label>50-80% pressure: <input type="number" min="0" max="100" value="85"></label><span class="hint">percent of default configuration (default: 85)</span><br>
-      <label>80-100% pressure: <input type="number" min="0" max="100" value="100"></label><span class="hint">percent of default configuration (default: 100)</span><br>
-      <label>0-50% delay: <input type="number" min="0" max="500" value="200"></label><span class="hint">additional ms (default: 200)</span><br>
-      <label>50-80% delay: <input type="number" min="0" max="500" value="100"></label><span class="hint">additional ms (default: 100)</span><br>
-      <label>80-100% delay: <input type="number" min="0" max="500" value="0"></label><span class="hint">additional ms (default: 0)</span>
-    </fieldset>
-    <br><br>
 
     <h3>D1</h3>
     <fieldset><legend>Upshift:</legend>
@@ -135,6 +123,19 @@
       <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
       <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
     </fieldset>
+    <br><br>
+    <fieldset id="tpsWipTuning" style="display: none;">
+      <legend>TPS WIP tuning:</legend>
+      <label>Current ADC: <span>0</span></label><span class="hint">move pedal before refreshing</span><br>
+      <label>Closed throttle ADC: <input type="number" min="0" max="4095" value="0"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as closed throttle.');">Set current</button></span><br>
+      <label>Wide-open throttle ADC: <input type="number" min="0" max="4095" value="4095"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as wide-open throttle.');">Set current</button></span><br><br>
+      <label>0-50% pressure: <input type="number" min="0" max="100" value="70"></label><span class="hint">percent of default configuration (default: 70)</span><br>
+      <label>50-80% pressure: <input type="number" min="0" max="100" value="85"></label><span class="hint">percent of default configuration (default: 85)</span><br>
+      <label>80-100% pressure: <input type="number" min="0" max="100" value="100"></label><span class="hint">percent of default configuration (default: 100)</span><br>
+      <label>0-50% delay: <input type="number" min="0" max="500" value="200"></label><span class="hint">additional ms (default: 200)</span><br>
+      <label>50-80% delay: <input type="number" min="0" max="500" value="100"></label><span class="hint">additional ms (default: 100)</span><br>
+      <label>80-100% delay: <input type="number" min="0" max="500" value="0"></label><span class="hint">additional ms (default: 0)</span>
+    </fieldset>
     <div class="actions">
       <input type="submit" value="Save">
       <button type="button" onclick="alert('Preview only: defaults would be restored on the ESP32.');">Reset</button>
@@ -149,5 +150,10 @@
       <input type="submit" value="Import JSON">
     </form>
   </div>
+  <script>
+    function toggleTpsWipTuning() {
+      document.getElementById('tpsWipTuning').style.display = document.getElementById('useThrottlePosition').checked ? '' : 'none';
+    }
+  </script>
 </body>
 </html>

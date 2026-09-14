@@ -326,7 +326,7 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
 
 int ShiftControl::getThrottlePressurePercent(int throttlePosition)
 {
-  if (!useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
+  if (throttlePosition < 0 || !useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
     return 100;
 
   if (throttlePosition < 50)
@@ -338,7 +338,7 @@ int ShiftControl::getThrottlePressurePercent(int throttlePosition)
 
 int ShiftControl::getThrottleDelayMs(int throttlePosition)
 {
-  if (!useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
+  if (throttlePosition < 0 || !useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
     return 0;
 
   if (throttlePosition < 50)

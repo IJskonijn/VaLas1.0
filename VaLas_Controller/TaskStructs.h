@@ -57,6 +57,7 @@ class TaskStructs {
             int* calculatedRpmPtr;
             int* throttlePositionPtr;
             bool* useThrottlePositionPtr;
+            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
         };
         typedef struct sensorParameters SensorParameters;
 		
