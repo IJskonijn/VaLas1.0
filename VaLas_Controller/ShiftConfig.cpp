@@ -25,6 +25,7 @@ static bool* g_usePedalShiftersPtr = nullptr;
 static bool* g_useLargeDisplayPtr = nullptr;
 static bool* g_useThrottlePositionPtr = nullptr;
 static VaLas_Controller::ThrottleSettings* g_throttleSettingsPtr = nullptr;
+static VaLas_Controller::PressureTimeMapSettings* g_pressureTimeMapPtr = nullptr;
 
 // Static default settings for display purposes
 static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
@@ -32,6 +33,7 @@ static bool g_defaultUseLargeDisplay = false;
 static bool g_defaultUseThrottlePosition = false;
 static bool g_defaultUseCanBus = false;
 static bool g_defaultUsePedalShifters = false;
+static VaLas_Controller::PressureTimeMapSettings g_defaultPressureTimeMap;
 static File g_importFile;
 
 static void handleRoot();
@@ -88,6 +90,7 @@ void ShiftConfig::execute(void * parameter)
   bool* useThrottlePositionPtr = parameters->useThrottlePositionPtr;
   VaLas_Controller::ThrottleSettings* throttleSettingsPtr = parameters->throttleSettingsPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
+  VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr = parameters->pressureTimeMapPtr;
 
   if (!webServerInitialized)
   {
@@ -97,6 +100,7 @@ void ShiftConfig::execute(void * parameter)
     g_useLargeDisplayPtr = useLargeDisplayPtr;
     g_useThrottlePositionPtr = useThrottlePositionPtr;
     g_throttleSettingsPtr = throttleSettingsPtr;
+    g_pressureTimeMapPtr = pressureTimeMapPtr;
 
     webServer.on("/", HTTP_GET, handleRoot);
     webServer.on("/save", HTTP_POST, handleSave);
@@ -116,16 +120,16 @@ void ShiftConfig::execute(void * parameter)
   vTaskDelay(20);
 }
 
-void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr)
+void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   if (spiffsMountingSuccess)
   {
-    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr);
+    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr);
     if (isLoadedFromFile)
       return;
 
     CreateDefaultConfig(shiftSettingsPtr);
-    writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr);
+    writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr);
   }
   else
   {
@@ -133,7 +137,7 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
   }
 }
 
-bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr)
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
@@ -142,7 +146,7 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
     return false;
   }
 
-  StaticJsonDocument<2048> doc;
+  StaticJsonDocument<3072> doc;
   DeserializationError error = deserializeJson(doc, file);
 
   if (error)
@@ -152,13 +156,13 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
     return false;
   }
 
-  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, doc);
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, doc);
 
   file.close();
   return true;
 }
 
-bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr)
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
@@ -166,7 +170,7 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
     return false;
   }
   
-  StaticJsonDocument<2048> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr);
+  StaticJsonDocument<3072> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr);
 
   if (serializeJson(doc, file) == 0) {
     file.close();
@@ -177,9 +181,9 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   return true;
 }
 
-StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr)
+StaticJsonDocument<3072> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
-  StaticJsonDocument<2048> doc;
+  StaticJsonDocument<3072> doc;
   doc["UseCanBus"] = *useCanBusPtr;
   doc["UsePedalShifters"] = *usePedalShiftersPtr;
   doc["UseLargeDisplay"] = *useLargeDisplayPtr;
@@ -192,6 +196,25 @@ StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
   doc["TpsLowDelayMs"] = throttleSettingsPtr->lowThrottleDelayMs;
   doc["TpsMediumDelayMs"] = throttleSettingsPtr->mediumThrottleDelayMs;
   doc["TpsHighDelayMs"] = throttleSettingsPtr->highThrottleDelayMs;
+
+  JsonObject ptm = doc.createNestedObject("PressureTimeMap");
+  ptm["Enabled"] = pressureTimeMapPtr->enabled;
+  ptm["ColdTempC"] = pressureTimeMapPtr->coldTempC;
+  ptm["WarmTempC"] = pressureTimeMapPtr->warmTempC;
+  ptm["HotTempC"] = pressureTimeMapPtr->hotTempC;
+  JsonArray pressureRows = ptm.createNestedArray("Pressure");
+  JsonArray delayRows = ptm.createNestedArray("Delay");
+  for (int row = 0; row < 3; row++)
+  {
+    JsonArray pressureRow = pressureRows.createNestedArray();
+    JsonArray delayRow = delayRows.createNestedArray();
+    for (int col = 0; col < 3; col++)
+    {
+      pressureRow.add(pressureTimeMapPtr->pressurePercent[row][col]);
+      delayRow.add(pressureTimeMapPtr->delayPercent[row][col]);
+    }
+  }
+
   JsonArray GearShiftSettings = doc.createNestedArray("GearShiftSettings");
 
   // add some values
@@ -213,7 +236,7 @@ StaticJsonDocument<2048> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
   return doc;
 }
 
-void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, StaticJsonDocument<2048> doc)
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072> doc)
 {
   // extract the values
   *useCanBusPtr = doc["UseCanBus"].as<bool>();
@@ -228,6 +251,22 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
   throttleSettingsPtr->lowThrottleDelayMs = doc["TpsLowDelayMs"] | 200;
   throttleSettingsPtr->mediumThrottleDelayMs = doc["TpsMediumDelayMs"] | 100;
   throttleSettingsPtr->highThrottleDelayMs = doc["TpsHighDelayMs"] | 0;
+
+  VaLas_Controller::PressureTimeMapSettings defaultPtm;
+  JsonObject ptm = doc["PressureTimeMap"];
+  pressureTimeMapPtr->enabled = ptm["Enabled"] | defaultPtm.enabled;
+  pressureTimeMapPtr->coldTempC = ptm["ColdTempC"] | defaultPtm.coldTempC;
+  pressureTimeMapPtr->warmTempC = ptm["WarmTempC"] | defaultPtm.warmTempC;
+  pressureTimeMapPtr->hotTempC = ptm["HotTempC"] | defaultPtm.hotTempC;
+  for (int row = 0; row < 3; row++)
+  {
+    for (int col = 0; col < 3; col++)
+    {
+      pressureTimeMapPtr->pressurePercent[row][col] = ptm["Pressure"].isNull() ? defaultPtm.pressurePercent[row][col] : ptm["Pressure"][row][col] | defaultPtm.pressurePercent[row][col];
+      pressureTimeMapPtr->delayPercent[row][col] = ptm["Delay"].isNull() ? defaultPtm.delayPercent[row][col] : ptm["Delay"][row][col] | defaultPtm.delayPercent[row][col];
+    }
+  }
+
   for (int i = 0; i < 6; i++)
   {
     shiftSettingsPtr[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();
@@ -325,7 +364,7 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   shiftSettings[5].DownshiftTorqueConverterLockup = 0;
 }
 
-void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr)
+void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   if (!spiffsMountingSuccess)
   {
@@ -333,7 +372,7 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
     return;
   }
 
-  if (!writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr))
+  if (!writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr))
   {
     Serial.println("Failed to save config to file");
   }
@@ -356,7 +395,7 @@ extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
 
 static void handleRoot()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -439,6 +478,40 @@ static void handleRoot()
   html += "<div class='setting-row'><label>50-80% delay:</label><input type='number' min='0' max='500' name='tpsMediumDelay' value='" + String(g_throttleSettingsPtr->mediumThrottleDelayMs) + "'><span class='hint'>additional ms (default: 100)</span></div>";
   html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><br><br>";
 
+  html += F("<fieldset><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>");
+  html += F("<label><input type='checkbox' name='ptmEnabled'");
+  if (g_pressureTimeMapPtr->enabled) html += F(" checked");
+  html += F("> Enable pressure/time map</label><br>");
+  html += "<div class='setting-row'><label>Cold ATF temp:</label><input type='number' min='-40' max='150' name='ptmColdTempC' value='" + String(g_pressureTimeMapPtr->coldTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.coldTempC) + ")</span></div>";
+  html += "<div class='setting-row'><label>Warm ATF temp:</label><input type='number' min='-40' max='150' name='ptmWarmTempC' value='" + String(g_pressureTimeMapPtr->warmTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.warmTempC) + ")</span></div>";
+  html += "<div class='setting-row'><label>Hot ATF temp:</label><input type='number' min='-40' max='150' name='ptmHotTempC' value='" + String(g_pressureTimeMapPtr->hotTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.hotTempC) + ")</span></div>";
+  html += F("<p class='hint'>Rows: closed / half / full throttle. Columns: cold / warm / hot ATF temp. Values are percent of the configured pressure/delay.</p>");
+
+  const char* rowLabels[3] = {"Closed", "Half", "Full"};
+  const char* colLabels[3] = {"Cold", "Warm", "Hot"};
+
+  html += F("<b>Pressure %</b><table>");
+  for (int row = 0; row < 3; row++)
+  {
+    html += "<tr><td>" + String(rowLabels[row]) + "</td>";
+    for (int col = 0; col < 3; col++)
+    {
+      html += "<td><input type='number' min='0' max='300' style='width:4rem' name='ptmP" + String(row) + String(col) + "' value='" + String(g_pressureTimeMapPtr->pressurePercent[row][col]) + "' title='" + String(colLabels[col]) + "'></td>";
+    }
+    html += "</tr>";
+  }
+  html += F("</table><br><b>Delay %</b><table>");
+  for (int row = 0; row < 3; row++)
+  {
+    html += "<tr><td>" + String(rowLabels[row]) + "</td>";
+    for (int col = 0; col < 3; col++)
+    {
+      html += "<td><input type='number' min='0' max='300' style='width:4rem' name='ptmD" + String(row) + String(col) + "' value='" + String(g_pressureTimeMapPtr->delayPercent[row][col]) + "' title='" + String(colLabels[col]) + "'></td>";
+    }
+    html += "</tr>";
+  }
+  html += F("</table></fieldset><br>");
+
   html += F("<input type='submit' value='Save'>");
   html += F(" <button type='button' onclick=\"if(confirm('Are you sure you want to reset to defaults?')){fetch('/reset',{method:'POST'}).then(()=>window.location.reload());}\">Reset</button>");
   html += F("</form>");
@@ -457,7 +530,7 @@ static void handleRoot()
 // Handle reset: restore defaults, save, and redirect
 static void handleReset()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -470,9 +543,10 @@ static void handleReset()
   *g_useLargeDisplayPtr = g_defaultUseLargeDisplay;
   *g_useThrottlePositionPtr = g_defaultUseThrottlePosition;
   *g_throttleSettingsPtr = VaLas_Controller::ThrottleSettings();
+  *g_pressureTimeMapPtr = VaLas_Controller::PressureTimeMapSettings();
 
   // Save to SPIFFS
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
 
   Serial.println("[WEB] Reset action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
@@ -497,7 +571,7 @@ static void handleReset()
 
 static void handleSave()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -516,6 +590,20 @@ static void handleSave()
   if (webServer.hasArg("tpsLowDelay")) g_throttleSettingsPtr->lowThrottleDelayMs = webServer.arg("tpsLowDelay").toInt();
   if (webServer.hasArg("tpsMediumDelay")) g_throttleSettingsPtr->mediumThrottleDelayMs = webServer.arg("tpsMediumDelay").toInt();
   if (webServer.hasArg("tpsHighDelay")) g_throttleSettingsPtr->highThrottleDelayMs = webServer.arg("tpsHighDelay").toInt();
+  g_pressureTimeMapPtr->enabled = webServer.hasArg("ptmEnabled");
+  if (webServer.hasArg("ptmColdTempC")) g_pressureTimeMapPtr->coldTempC = webServer.arg("ptmColdTempC").toInt();
+  if (webServer.hasArg("ptmWarmTempC")) g_pressureTimeMapPtr->warmTempC = webServer.arg("ptmWarmTempC").toInt();
+  if (webServer.hasArg("ptmHotTempC")) g_pressureTimeMapPtr->hotTempC = webServer.arg("ptmHotTempC").toInt();
+  for (int row = 0; row < 3; row++)
+  {
+    for (int col = 0; col < 3; col++)
+    {
+      String pKey = "ptmP" + String(row) + String(col);
+      String dKey = "ptmD" + String(row) + String(col);
+      if (webServer.hasArg(pKey)) g_pressureTimeMapPtr->pressurePercent[row][col] = webServer.arg(pKey).toInt();
+      if (webServer.hasArg(dKey)) g_pressureTimeMapPtr->delayPercent[row][col] = webServer.arg(dKey).toInt();
+    }
+  }
   for (int i = 0; i < 6; i++)
   {
     String baseU = "u" + String(i);
@@ -535,7 +623,7 @@ static void handleSave()
   }
 
   // Persist to SPIFFS via ShiftConfig wrapper
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
   Serial.println("[WEB] Save action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
   Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
@@ -559,14 +647,14 @@ static void handleSave()
 
 static void handleExport()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
-  StaticJsonDocument<2048> doc = shiftConfig.createJsonFromObject(
-    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  StaticJsonDocument<3072> doc = shiftConfig.createJsonFromObject(
+    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
   String json;
   serializeJsonPretty(doc, json);
   webServer.sendHeader("Content-Disposition", "attachment; filename=config.json");
@@ -597,7 +685,7 @@ static void handleImportUpload()
 
 static void handleImport()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr)
   {
     webServer.send(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -613,7 +701,7 @@ static void handleImport()
     return;
   }
 
-  StaticJsonDocument<2048> doc;
+  StaticJsonDocument<3072> doc;
   DeserializationError error = deserializeJson(doc, file);
   file.close();
   SPIFFS.remove("/import.json");
@@ -624,8 +712,8 @@ static void handleImport()
     return;
   }
 
-  ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, doc);
-  if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr))
+  ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, doc);
+  if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr))
   {
     webServer.send(500, "text/plain", "Import failed: could not save configuration");
     return;
@@ -650,7 +738,7 @@ static void handleCalibrateClosed()
   }
 
   g_throttleSettingsPtr->closedAdc = rawAdc;
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
   webServer.send(200, "text/plain", "Closed throttle calibration saved");
 }
 
@@ -668,7 +756,7 @@ static void handleCalibrateWideOpen()
   }
 
   g_throttleSettingsPtr->wideOpenAdc = rawAdc;
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
   webServer.send(200, "text/plain", "Wide-open throttle calibration saved");
 }
 
@@ -679,6 +767,7 @@ static void initDefaultSettings() {
   g_defaultUseThrottlePosition = false;
   g_defaultUseCanBus = true;
   g_defaultUsePedalShifters = true;
+  g_defaultPressureTimeMap = VaLas_Controller::PressureTimeMapSettings();
 }
 
 bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")

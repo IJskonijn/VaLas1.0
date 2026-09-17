@@ -121,6 +121,26 @@ class VaLas_Controller {
       int mediumThrottleDelayMs = 100;
       int highThrottleDelayMs = 0;
     } ThrottleSettings;
+
+    // Bilinear 2D scaling of ShiftControlV2 pressures/delays by throttle position (rows: closed/half/full)
+    // and ATF temperature (columns: cold/warm/hot breakpoints). Values are percent of the configured pressure/delay.
+    typedef struct
+    {
+      bool enabled = false;
+      int coldTempC = 0;
+      int warmTempC = 60;
+      int hotTempC = 110;
+      int pressurePercent[3][3] = {
+        {91, 70, 67},    // Closed throttle:  cold, warm, hot
+        {111, 85, 81},   // Half throttle:    cold, warm, hot
+        {130, 100, 95}   // Full throttle:    cold, warm, hot
+      };
+      int delayPercent[3][3] = {
+        {182, 130, 117}, // Closed throttle:  cold, warm, hot
+        {161, 115, 104}, // Half throttle:    cold, warm, hot
+        {140, 100, 90}   // Full throttle:    cold, warm, hot
+      };
+    } PressureTimeMapSettings;
 		
 	private:
 };

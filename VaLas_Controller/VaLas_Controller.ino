@@ -19,6 +19,7 @@
 #include "TaskStructs.h"
 #include "ShiftConfig.h"
 #include "ShiftControl.h"
+#include "ShiftControlV2.h"
 #include "DisplayHandler.h"
 #include "Sensors.h"
 #include "Outputs.h"
@@ -33,6 +34,7 @@ Sensors sensors;
 Outputs outputs;
 DisplayHandler displayHandler;
 ShiftControl shiftControl;
+ShiftControlV2 shiftControlV2;
 ShiftConfig shiftConfig;
 Gearlever* gearLeverInterface;
 
@@ -43,6 +45,7 @@ bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 VaLas_Controller::ThrottleSettings initial_ThrottleSettings;
+VaLas_Controller::PressureTimeMapSettings initial_PressureTimeMapSettings;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
 
@@ -76,7 +79,9 @@ TaskStructs::ShiftControlParameters shiftControlParameters
   initial_GearboxSettingsPtr,
   &initial_ThrottlePosition,
   &initial_UseThrottlePosition,
-  &initial_ThrottleSettings
+  &initial_ThrottleSettings,
+  &initial_AtfTemp,
+  &initial_PressureTimeMapSettings
 };
 
 TaskStructs::ShiftConfigParameters shiftConfigParameters
@@ -86,7 +91,8 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_UseLargeDisplay,
   &initial_UseThrottlePosition,
   initial_GearboxSettingsPtr,
-  &initial_ThrottleSettings
+  &initial_ThrottleSettings,
+  &initial_PressureTimeMapSettings
 };
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
@@ -182,7 +188,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleSettings);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleSettings, &initial_PressureTimeMapSettings);
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
@@ -193,6 +199,7 @@ void setup()
     gearLeverInterface = new Gearlever_Modded();
 
   shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr);
+  shiftControlV2.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
@@ -257,9 +264,15 @@ void gearLeverHandlerTask(void* parameter){
 }
 
 void shiftControlHandlerTask(void* parameter){
+  TaskStructs::ShiftControlParameters* params = (TaskStructs::ShiftControlParameters*) parameter;
+
   for(;;){
-    shiftControl.execute(parameter);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    // ShiftControlV2 (non-blocking, ATF-temp compensated) is used when throttle position is enabled in config; otherwise fall back to V1.
+    if (params->useThrottlePositionPtr && *(params->useThrottlePositionPtr))
+      shiftControlV2.execute(parameter);
+    else
+      shiftControl.execute(parameter);
+    vTaskDelay(20 / portTICK_PERIOD_MS);
   }
 }
 

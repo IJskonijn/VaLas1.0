@@ -25,6 +25,8 @@ class TaskStructs {
             int* throttlePositionPtr;
             bool* useThrottlePositionPtr;
             VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
+            int* atfTempPtr;
+            VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr;
         };
         typedef struct shiftControlParameters ShiftControlParameters;
 
@@ -36,6 +38,7 @@ class TaskStructs {
             bool* useThrottlePositionPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
             VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
+            VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
 
