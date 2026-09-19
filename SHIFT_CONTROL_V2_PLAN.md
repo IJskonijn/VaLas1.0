@@ -33,3 +33,39 @@
 ## Further considerations
 - ATF-temp curve breakpoints are estimated/adapted from 7226ctrl's `shiftTimeMap` trend, not measured on this hardware — a tunable starting point.
 - The 5↔5+ overdrive lockup pressures (15/25/20 constants) are only throttle-scaled, not ATF-temp-scaled, to avoid touching TCC lockup feel; only the profile-driven line/shift pressures get ATF-temp scaling.
+
+
+
+
+TO FIX:
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:1
+load:0x3fff0018,len:4
+load:0x3fff001c,len:1216
+ho 0 tail 12 room 4
+load:0x40078000,len:10944
+load:0x40080400,len:6388
+entry 0x400806b4
+Begin program
+WiFi AP started. Connect to SSID: VaLas_722.6_Controller
+IP address: 192.168.4.1
+Pass: 12345678
+Guru Meditation Error: Core  1 panic'ed (Unhandled debug exception)
+Debug exception reason: Stack canary watchpoint triggered (loopTask) 
+Core 1 register dump:
+PC      : 0x400875ec  PS      : 0x00060636  A0      : 0x3ffb0120  A1      : 0x3ffb0060  
+A2      : 0x00000001  A3      : 0x3ffc8590  A4      : 0x3ffc8590  A5      : 0x00000001  
+A6      : 0x00060620  A7      : 0x00000000  A8      : 0x80085c20  A9      : 0x3ffb0100  
+A10     : 0x3ff000e0  A11     : 0x00000001  A12     : 0x3ffbeb08  A13     : 0x00000001  
+A14     : 0x00060623  A15     : 0x00000000  SAR     : 0x0000001a  EXCCAUSE: 0x00000001  
+EXCVADDR: 0x00000000  LBEG    : 0x4000c349  LEND    : 0x4000c36b  LCOUNT  : 0x00000000  
+
+ELF file SHA256: 0000000000000000
+
+Backtrace: 0x400875ec:0x3ffb0060 0x3ffb011d:0x3ffb0140 0x4014910f:0x3ffb0180 0x401491e6:0x3ffb01a0 0x400879c6:0x3ffb01c0 0x40087ec9:0x3ffb01e0 0x401518d7:0x3ffb0250 0x401214ce:0x3ffb0280 0x401216ea:0x3ffb02b0 0x401226a5:0x3ffb02e0 0x40124cc1:0x3ffb0310 0x40120420:0x3ffb0360 0x40120a95:0x3ffb0390 0x4011ff12:0x3ffb03b0 0x401467b7:0x3ffb03d0 0x4000bdbb:0x3ffb03f0 0x40001125:0x3ffb0410 0x400594e9:0x3ffb0430 0x400feea2:0x3ffb0450 0x400fef15:0x3ffb0480 0x400dce0b:0x3ffb04a0 0x400dcac3:0x3ffb04c0 0x400dcad5:0x3ffb04e0 0x4015aede:0x3ffb0500 0x400d5025:0x3ffb0530 0x400d5156:0x3ffb0560 0x400d53a0:0x3ffb0580 0x400d528d:0x3ffb05a0 0x400d54a4:0x3ffb05c0 0x400d6a41:0x3ffb0670 0x400d6c4d:0x3ffb1f40 0x400dad8a:0x3ffb1f70 0x400e4576:0x3ffb1fb0 0x4008a1ce:0x3ffb1fd0
+
+Rebooting...
