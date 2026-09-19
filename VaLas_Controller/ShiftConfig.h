@@ -15,8 +15,8 @@ class ShiftConfig {
 		void SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr);
 		static void CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettings);
 		bool writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr);
-		static void createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072> doc);
-		StaticJsonDocument<3072> createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr);
+		static void createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, const StaticJsonDocument<3072>& doc);
+		void createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072>& doc);
 		bool getDisplayIsLarge();
 		
 	private:

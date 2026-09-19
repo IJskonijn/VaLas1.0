@@ -146,7 +146,7 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
     return false;
   }
 
-  StaticJsonDocument<3072> doc;
+  static StaticJsonDocument<3072> doc;
   DeserializationError error = deserializeJson(doc, file);
 
   if (error)
@@ -170,7 +170,8 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
     return false;
   }
   
-  StaticJsonDocument<3072> doc = createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr);
+  static StaticJsonDocument<3072> doc;
+  createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, doc);
 
   if (serializeJson(doc, file) == 0) {
     file.close();
@@ -181,9 +182,9 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   return true;
 }
 
-StaticJsonDocument<3072> ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
+void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072>& doc)
 {
-  StaticJsonDocument<3072> doc;
+  doc.clear();
   doc["UseCanBus"] = *useCanBusPtr;
   doc["UsePedalShifters"] = *usePedalShiftersPtr;
   doc["UseLargeDisplay"] = *useLargeDisplayPtr;
@@ -233,10 +234,9 @@ StaticJsonDocument<3072> ShiftConfig::createJsonFromObject(VaLas_Controller::Shi
     shiftSetting["DownshiftTorqueConverterLockup"] = setting.DownshiftTorqueConverterLockup;
   }
 
-  return doc;
 }
 
-void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072> doc)
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, const StaticJsonDocument<3072>& doc)
 {
   // extract the values
   *useCanBusPtr = doc["UseCanBus"].as<bool>();
@@ -653,8 +653,9 @@ static void handleExport()
     return;
   }
 
-  StaticJsonDocument<3072> doc = shiftConfig.createJsonFromObject(
-    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr);
+  static StaticJsonDocument<3072> doc;
+  shiftConfig.createJsonFromObject(
+    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, doc);
   String json;
   serializeJsonPretty(doc, json);
   webServer.sendHeader("Content-Disposition", "attachment; filename=config.json");
@@ -701,7 +702,7 @@ static void handleImport()
     return;
   }
 
-  StaticJsonDocument<3072> doc;
+  static StaticJsonDocument<3072> doc;
   DeserializationError error = deserializeJson(doc, file);
   file.close();
   SPIFFS.remove("/import.json");
