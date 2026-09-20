@@ -253,7 +253,7 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
   throttleSettingsPtr->highThrottleDelayMs = doc["TpsHighDelayMs"] | 0;
 
   VaLas_Controller::PressureTimeMapSettings defaultPtm;
-  JsonObject ptm = doc["PressureTimeMap"];
+  JsonObjectConst ptm = doc["PressureTimeMap"];
   pressureTimeMapPtr->enabled = ptm["Enabled"] | defaultPtm.enabled;
   pressureTimeMapPtr->coldTempC = ptm["ColdTempC"] | defaultPtm.coldTempC;
   pressureTimeMapPtr->warmTempC = ptm["WarmTempC"] | defaultPtm.warmTempC;
