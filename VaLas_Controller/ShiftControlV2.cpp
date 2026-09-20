@@ -201,7 +201,7 @@ void ShiftControlV2::startDownShift(int customMpcAfterShift, VaLas_Controller::G
   else
     return; // Something went wrong
 
-  int throttlePosition = throttlePositionPointerV2 ? *throttlePositionPointerV2 : 100;
+  int throttlePosition = getEffectiveThrottlePosition();
   int linePressure = scalePressure2D(gearboxSettingsV2[gear].DownshiftLinePressure, throttlePosition, atfTempC);
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear].DownshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear].DownshiftDelay, throttlePosition, atfTempC);
@@ -237,7 +237,7 @@ void ShiftControlV2::startUpShift(int customMpcAfterShift, VaLas_Controller::Gea
   else
     return; // Something went wrong
 
-  int throttlePosition = throttlePositionPointerV2 ? *throttlePositionPointerV2 : 100;
+  int throttlePosition = getEffectiveThrottlePosition();
   int linePressure = scalePressure2D(gearboxSettingsV2[gear - 2].UpshiftLinePressure, throttlePosition, atfTempC);
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear - 2].UpshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear - 2].UpshiftDelay, throttlePosition, atfTempC);
@@ -262,7 +262,7 @@ void ShiftControlV2::startSelectFivetccToFive(VaLas_Controller::GearLeverPositio
   String screenVar = displayHandlerPointerV2->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  int throttlePosition = throttlePositionPointerV2 ? *throttlePositionPointerV2 : 100;
+  int throttlePosition = getEffectiveThrottlePosition();
   activeShiftDelayMs = scaleDelay2D(gearboxSettingsV2[gear].DownshiftDelay, throttlePosition, atfTempC);
   activeFinalMpc = scalePressure2D(15, throttlePosition, atfTempC);
   activeKind = TransitionKind::FiveTccToFive;
@@ -277,7 +277,7 @@ void ShiftControlV2::startSelectFiveToFivetcc(VaLas_Controller::GearLeverPositio
   String screenVar = displayHandlerPointerV2->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  int throttlePosition = throttlePositionPointerV2 ? *throttlePositionPointerV2 : 100;
+  int throttlePosition = getEffectiveThrottlePosition();
   activeShiftDelayMs = scaleDelay2D(gearboxSettingsV2[gear - 2].UpshiftDelay, throttlePosition, atfTempC);
   activeFinalMpc = scalePressure2D(25, throttlePosition, atfTempC);
   activeKind = TransitionKind::FiveToFiveTcc;
@@ -369,6 +369,12 @@ static int bilerp3x3(int throttlePosition, int atfTempC, const int grid[3][3], i
   float top = grid[r0][c0] + (grid[r0][c1] - grid[r0][c0]) * ct;
   float bottom = grid[r1][c0] + (grid[r1][c1] - grid[r1][c0]) * ct;
   return (int)(top + (bottom - top) * rt);
+}
+
+int ShiftControlV2::getEffectiveThrottlePosition()
+{
+  int throttlePosition = throttlePositionPointerV2 ? *throttlePositionPointerV2 : -1;
+  return (throttlePosition < 0) ? 100 : throttlePosition; // No/invalid TPS reading: assume full throttle, same convention as V1
 }
 
 int ShiftControlV2::getPressurePercent(int throttlePosition, int atfTempC)
