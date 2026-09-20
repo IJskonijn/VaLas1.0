@@ -35,6 +35,7 @@ class ShiftControlV2 {
 		void startSelectFiveToFivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear, int atfTempC);
 		void tick();
 		void finishShift();
+		int getEffectiveThrottlePosition();
 		int getPressurePercent(int throttlePosition, int atfTempC);
 		int getDelayPercent(int throttlePosition, int atfTempC);
 		int scalePressure2D(int pressure, int throttlePosition, int atfTempC);
