@@ -15,6 +15,7 @@ class DisplayHandler {
 		const String ToString(const VaLas_Controller::GearLeverPosition leverPosition, const int currentGear);
 		
 	private:
+		int u8g2_x_coordinate;
 		int u8g2_y_coordinate;
 		const uint8_t* u8g2_selectedFont;
 

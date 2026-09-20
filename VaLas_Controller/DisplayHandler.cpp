@@ -20,10 +20,12 @@ void DisplayHandler::begin()
 {
   if (getDisplayIsLarge()) {
     activeDisplay = &largeDisplay;
-    u8g2_y_coordinate = 29;
-    u8g2_selectedFont = u8g2_font_logisoso28_tr;
+    u8g2_x_coordinate = 10;
+    u8g2_y_coordinate = 34;
+    u8g2_selectedFont = u8g2_font_logisoso34_tr;
   } else {
     activeDisplay = &smallDisplay;
+    u8g2_x_coordinate = 1;
     u8g2_y_coordinate = 32;
     u8g2_selectedFont = u8g2_font_logisoso30_tr;
   }
@@ -68,14 +70,14 @@ void DisplayHandler::execute(void * parameter)
 void DisplayHandler::DisplayStartupOnScreen()
 {
   activeDisplay->clearBuffer();
-  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->setFont(u8g2_font_logisoso30_tr);
   activeDisplay->drawStr(1, u8g2_y_coordinate, "VaLas");
   activeDisplay->sendBuffer();
   
   vTaskDelay(1000); // delay(1500);
 
   activeDisplay->clearBuffer();
-  activeDisplay->setFont(u8g2_selectedFont);
+  activeDisplay->setFont(u8g2_font_logisoso30_tr);
   activeDisplay->drawStr(1, u8g2_y_coordinate, "Ver. 1.1");
   activeDisplay->sendBuffer();
 
@@ -89,7 +91,7 @@ void DisplayHandler::displayMainScreen(const VaLas_Controller::GearLeverPosition
 
   // Draw gear      
   activeDisplay->setFont(u8g2_selectedFont);
-  activeDisplay->drawStr(1, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
+  activeDisplay->drawStr(u8g2_x_coordinate, u8g2_y_coordinate, ToString(currentLeverPosition, currentGear).c_str());
 
   // Draw ATF temp
   if ((currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive || currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse) && atfTemp > -1)
