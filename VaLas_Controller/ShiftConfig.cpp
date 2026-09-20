@@ -122,6 +122,16 @@ void ShiftConfig::execute(void * parameter)
 
 void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
+  // Expose the config pointers now (e.g. for getDisplayIsLarge()) instead of waiting for the
+  // web server task's first tick, which runs after displayHandler.begin() during setup().
+  g_shiftSettingsPtr = shiftSettingsPtr;
+  g_useCanBusPtr = useCanBusPtr;
+  g_usePedalShiftersPtr = usePedalShiftersPtr;
+  g_useLargeDisplayPtr = useLargeDisplayPtr;
+  g_useThrottlePositionPtr = useThrottlePositionPtr;
+  g_throttleSettingsPtr = throttleSettingsPtr;
+  g_pressureTimeMapPtr = pressureTimeMapPtr;
+
   if (spiffsMountingSuccess)
   {
     bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr);
