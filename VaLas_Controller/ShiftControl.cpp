@@ -13,9 +13,6 @@ Gearlever* gearlever;
 
 VaLas_Controller::DisplayScreen* screenToDisplayValue;
 VaLas_Controller::ShiftSetting* gearboxSettings;
-int* throttlePositionPointer;
-bool* useThrottlePositionPointer;
-VaLas_Controller::ThrottleSettings* throttleSettingsPointer;
 
 
 void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr, 
@@ -27,18 +24,12 @@ void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::Pwm
   gearlever = gearLeverPtr;
   screenToDisplayValue = screenToDisplayPtr;
   gearboxSettings = gearboxSettingsPtr;
-  throttlePositionPointer = nullptr;
-  useThrottlePositionPointer = nullptr;
-  throttleSettingsPointer = nullptr;
 }
 
 void ShiftControl::execute(void * parameter)
 { 
   TaskStructs::ShiftControlParameters *parameters = (TaskStructs::ShiftControlParameters*) parameter;
   int* gear = parameters->gearPtr;
-  throttlePositionPointer = parameters->throttlePositionPtr;
-  useThrottlePositionPointer = parameters->useThrottlePositionPtr;
-  throttleSettingsPointer = parameters->throttleSettingsPtr;
   //VaLas_Controller::ShiftSetting* gearboxSettings = parameters->shiftSettings;
   VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
@@ -230,10 +221,9 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
   else
     return; // Something went wrong
 
-  int throttlePosition = throttlePositionPointer ? *throttlePositionPointer : 100;
-  int linePressure = scalePressure(gearboxSettings[gear].DownshiftLinePressure, throttlePosition);
-  int shiftPressure = scalePressure(gearboxSettings[gear].DownshiftShiftPressure, throttlePosition);
-  int shiftDelay = gearboxSettings[gear].DownshiftDelay + getThrottleDelayMs(throttlePosition);
+  int linePressure = constrain(gearboxSettings[gear].DownshiftLinePressure, 0, 255);
+  int shiftPressure = constrain(gearboxSettings[gear].DownshiftShiftPressure, 0, 255);
+  int shiftDelay = gearboxSettings[gear].DownshiftDelay;
   ledcWrite(pwmChannelsPointer->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointer->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
@@ -254,7 +244,7 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
     vTaskDelay(shiftDelay);
   }
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, scalePressure(customMpcAfterShift, throttlePosition));
+  ledcWrite(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255));
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 }
@@ -276,10 +266,9 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
   else
     return; // Something went wrong
 
-  int throttlePosition = throttlePositionPointer ? *throttlePositionPointer : 100;
-  int linePressure = scalePressure(gearboxSettings[gear - 2].UpshiftLinePressure, throttlePosition);
-  int shiftPressure = scalePressure(gearboxSettings[gear - 2].UpshiftShiftPressure, throttlePosition);
-  int shiftDelay = gearboxSettings[gear - 2].UpshiftDelay + getThrottleDelayMs(throttlePosition);
+  int linePressure = constrain(gearboxSettings[gear - 2].UpshiftLinePressure, 0, 255);
+  int shiftPressure = constrain(gearboxSettings[gear - 2].UpshiftShiftPressure, 0, 255);
+  int shiftDelay = gearboxSettings[gear - 2].UpshiftDelay;
   ledcWrite(pwmChannelsPointer->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointer->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
@@ -287,7 +276,7 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
 
   vTaskDelay(shiftDelay);
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, scalePressure(customMpcAfterShift, throttlePosition));
+  ledcWrite(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255));
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(gearPin, LOW);
 }
@@ -299,10 +288,9 @@ void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition cu
   String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  int throttlePosition = throttlePositionPointer ? *throttlePositionPointer : 100;
-  vTaskDelay(gearboxSettings[gear].DownshiftDelay + getThrottleDelayMs(throttlePosition));
+  vTaskDelay(gearboxSettings[gear].DownshiftDelay);
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, scalePressure(15, throttlePosition));
+  ledcWrite(pwmChannelsPointer->mpcChannel, constrain(15, 0, 255));
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   ledcWrite(pwmChannelsPointer->tccChannel, 0);
@@ -315,42 +303,10 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
   String screenVar = displayHandlerPointer->ToString(currentLeverPosition, gear);
   Serial.println("Downshift to " + screenVar);
 
-  int throttlePosition = throttlePositionPointer ? *throttlePositionPointer : 100;
-  vTaskDelay(gearboxSettings[gear - 2].UpshiftDelay + getThrottleDelayMs(throttlePosition));
+  vTaskDelay(gearboxSettings[gear - 2].UpshiftDelay);
 
-  ledcWrite(pwmChannelsPointer->mpcChannel, scalePressure(25, throttlePosition));
+  ledcWrite(pwmChannelsPointer->mpcChannel, constrain(25, 0, 255));
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
   ledcWrite(pwmChannelsPointer->tccChannel, (255 * 95) / 100); //95% for torque converter lockup with some slip for comfort
-}
-
-int ShiftControl::getThrottlePressurePercent(int throttlePosition)
-{
-  if (throttlePosition < 0 || !useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
-    return 100;
-
-  if (throttlePosition < 50)
-    return throttleSettingsPointer->lowThrottlePressurePercent;
-  if (throttlePosition < 80)
-    return throttleSettingsPointer->mediumThrottlePressurePercent;
-  return throttleSettingsPointer->highThrottlePressurePercent;
-}
-
-int ShiftControl::getThrottleDelayMs(int throttlePosition)
-{
-  if (throttlePosition < 0 || !useThrottlePositionPointer || !*useThrottlePositionPointer || !throttleSettingsPointer)
-    return 0;
-
-  if (throttlePosition < 50)
-    return constrain(throttleSettingsPointer->lowThrottleDelayMs, 0, 500);
-  if (throttlePosition < 80)
-    return constrain(throttleSettingsPointer->mediumThrottleDelayMs, 0, 500);
-  return constrain(throttleSettingsPointer->highThrottleDelayMs, 0, 500);
-}
-
-int ShiftControl::scalePressure(int pressure, int throttlePosition)
-{
-  pressure = constrain(pressure, 0, 255);
-  int pressurePercent = constrain(getThrottlePressurePercent(throttlePosition), 0, 100);
-  return constrain((pressure * pressurePercent) / 100, 0, 255);
 }

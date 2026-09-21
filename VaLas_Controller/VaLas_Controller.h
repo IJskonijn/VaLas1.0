@@ -110,17 +110,12 @@ class VaLas_Controller {
       int DownshiftTorqueConverterLockup = 0;       //  TCC        min-max 0-255
     }  ShiftSetting;
 
+    // TPS ADC calibration only; throttle-based pressure/delay tuning lives exclusively in PressureTimeMapSettings (ShiftControlV2).
     typedef struct
     {
       int closedAdc = 0;
       int wideOpenAdc = 4095;
-      int lowThrottlePressurePercent = 70;
-      int mediumThrottlePressurePercent = 85;
-      int highThrottlePressurePercent = 100;
-      int lowThrottleDelayMs = 200;
-      int mediumThrottleDelayMs = 100;
-      int highThrottleDelayMs = 0;
-    } ThrottleSettings;
+    } ThrottleCalibration;
 
     // Bilinear 2D scaling of ShiftControlV2 pressures/delays by throttle position (rows: closed/half/full)
     // and ATF temperature (columns: cold/warm/hot breakpoints). Values are percent of the configured pressure/delay.

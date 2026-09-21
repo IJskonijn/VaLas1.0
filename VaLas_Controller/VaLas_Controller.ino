@@ -44,7 +44,7 @@ bool initial_UseLargeDisplay = true; // Default is false
 bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
-VaLas_Controller::ThrottleSettings initial_ThrottleSettings;
+VaLas_Controller::ThrottleCalibration initial_ThrottleCalibration;
 VaLas_Controller::PressureTimeMapSettings initial_PressureTimeMapSettings;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
@@ -79,7 +79,7 @@ TaskStructs::ShiftControlParameters shiftControlParameters
   initial_GearboxSettingsPtr,
   &initial_ThrottlePosition,
   &initial_UseThrottlePosition,
-  &initial_ThrottleSettings,
+  &initial_ThrottleCalibration,
   &initial_AtfTemp,
   &initial_PressureTimeMapSettings
 };
@@ -91,7 +91,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_UseLargeDisplay,
   &initial_UseThrottlePosition,
   initial_GearboxSettingsPtr,
-  &initial_ThrottleSettings,
+  &initial_ThrottleCalibration,
   &initial_PressureTimeMapSettings
 };
 
@@ -112,7 +112,7 @@ TaskStructs::SensorParameters sensorParameters
   &initial_CalculatedRpm,
   &initial_ThrottlePosition,
   &initial_UseThrottlePosition,
-  &initial_ThrottleSettings
+  &initial_ThrottleCalibration
 };
 
 /////
@@ -188,7 +188,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleSettings, &initial_PressureTimeMapSettings);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings);
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();

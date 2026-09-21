@@ -24,7 +24,7 @@ class TaskStructs {
             VaLas_Controller::ShiftSetting* shiftSettings;
             int* throttlePositionPtr;
             bool* useThrottlePositionPtr;
-            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
+            VaLas_Controller::ThrottleCalibration* throttleSettingsPtr;
             int* atfTempPtr;
             VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr;
         };
@@ -37,7 +37,7 @@ class TaskStructs {
             bool* useLargeDisplayPtr;
             bool* useThrottlePositionPtr;
             VaLas_Controller::ShiftSetting* shiftSettings;
-            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
+            VaLas_Controller::ThrottleCalibration* throttleSettingsPtr;
             VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
@@ -60,7 +60,7 @@ class TaskStructs {
             int* calculatedRpmPtr;
             int* throttlePositionPtr;
             bool* useThrottlePositionPtr;
-            VaLas_Controller::ThrottleSettings* throttleSettingsPtr;
+            VaLas_Controller::ThrottleCalibration* throttleSettingsPtr;
         };
         typedef struct sensorParameters SensorParameters;
 		

@@ -111,7 +111,7 @@ int Sensors::ReadRpm()
 int Sensors::ReadThrottlePosition()
 {
     int throttlePosition = 0;
-    VaLas_Controller::ThrottleSettings settings;
+    VaLas_Controller::ThrottleCalibration settings;
     if (read_throttle_position(&throttlePosition, settings)) {
         return throttlePosition;
     }
@@ -238,7 +238,7 @@ bool Sensors::read_atf_temp(int* dest){
     }
 }
 
-bool Sensors::read_throttle_position(int* dest, const VaLas_Controller::ThrottleSettings& settings) {
+bool Sensors::read_throttle_position(int* dest, const VaLas_Controller::ThrottleCalibration& settings) {
     int rawAdc = ReadThrottleAdc();
     if (rawAdc < 0 || settings.wideOpenAdc <= settings.closedAdc ||
         settings.wideOpenAdc - settings.closedAdc < 100) {

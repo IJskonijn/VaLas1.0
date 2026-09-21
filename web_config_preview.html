@@ -13,6 +13,9 @@
     fieldset label input { box-sizing: border-box; width: 5rem; }
     fieldset .hint { display: inline-block; width: auto; margin-left: 6px; vertical-align: middle; }
     input[type='number'] { width: 70px; }
+    table { border-collapse: collapse; margin: 4px 0 10px; }
+    th, td { padding: 2px 5px; text-align: center; }
+    th:first-child, td:first-child { text-align: left; }
     .hint { color: #555; font-size: 0.9em; }
     .actions { margin-top: 18px; }
     button, input[type='submit'] { padding: 5px 12px; margin-right: 8px; }
@@ -33,11 +36,11 @@
     <span class="hint">(default: checked)</span><br>
     <label><input type="checkbox" checked> Use pedal shifters</label>
     <span class="hint">(default: checked)</span><br>
-    <label><input type="checkbox"> Use 0.96 OLED</label>
-    <span class="hint">(default: unchecked)</span>
+    <label><input type="checkbox" checked> Use 0.96 OLED</label>
+    <span class="hint">(default: checked)</span>
 
     <br>
-    <label><input type="checkbox" id="useThrottlePosition" onchange="toggleTpsWipTuning()"> Use throttle position sensor</label>
+    <label><input type="checkbox" id="useThrottlePosition" onchange="toggleThrottleSections()"> Use throttle position sensor</label>
     <span class="hint">(default: unchecked)</span>
 
     <h3>D1</h3>
@@ -124,17 +127,34 @@
       <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
     </fieldset>
     <br><br>
-    <fieldset id="tpsWipTuning" style="display: none;">
-      <legend>TPS WIP tuning:</legend>
+    <fieldset id="tpsCalibration" style="display: none;">
+      <legend>TPS calibration:</legend>
       <label>Current ADC: <span>0</span></label><span class="hint">move pedal before refreshing</span><br>
       <label>Closed throttle ADC: <input type="number" min="0" max="4095" value="0"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as closed throttle.');">Set current</button></span><br>
-      <label>Wide-open throttle ADC: <input type="number" min="0" max="4095" value="4095"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as wide-open throttle.');">Set current</button></span><br><br>
-      <label>0-50% pressure: <input type="number" min="0" max="100" value="70"></label><span class="hint">percent of default configuration (default: 70)</span><br>
-      <label>50-80% pressure: <input type="number" min="0" max="100" value="85"></label><span class="hint">percent of default configuration (default: 85)</span><br>
-      <label>80-100% pressure: <input type="number" min="0" max="100" value="100"></label><span class="hint">percent of default configuration (default: 100)</span><br>
-      <label>0-50% delay: <input type="number" min="0" max="500" value="200"></label><span class="hint">additional ms (default: 200)</span><br>
-      <label>50-80% delay: <input type="number" min="0" max="500" value="100"></label><span class="hint">additional ms (default: 100)</span><br>
-      <label>80-100% delay: <input type="number" min="0" max="500" value="0"></label><span class="hint">additional ms (default: 0)</span>
+      <label>Wide-open throttle ADC: <input type="number" min="0" max="4095" value="4095"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as wide-open throttle.');">Set current</button></span>
+    </fieldset>
+    <br>
+    <fieldset id="pressureTimeMap" style="display: none;">
+      <legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>
+      <label><input type="checkbox"> Enable pressure/time map</label><br>
+      <label>Cold ATF temp: <input type="number" min="-40" max="150" value="0"></label><span class="hint">&deg;C (default: 0)</span><br>
+      <label>Warm ATF temp: <input type="number" min="-40" max="150" value="60"></label><span class="hint">&deg;C (default: 60)</span><br>
+      <label>Hot ATF temp: <input type="number" min="-40" max="150" value="110"></label><span class="hint">&deg;C (default: 110)</span><br>
+      <p class="hint">Rows: closed / half / full throttle. Columns: cold / warm / hot ATF temp. Values are percent of the configured pressure/delay.</p>
+      <b>Pressure %</b>
+      <table>
+        <tr><th></th><th>Cold</th><th>Warm</th><th>Hot</th></tr>
+        <tr><td>Closed</td><td><input type="number" min="0" max="300" value="91"></td><td><input type="number" min="0" max="300" value="70"></td><td><input type="number" min="0" max="300" value="67"></td></tr>
+        <tr><td>Half</td><td><input type="number" min="0" max="300" value="111"></td><td><input type="number" min="0" max="300" value="85"></td><td><input type="number" min="0" max="300" value="81"></td></tr>
+        <tr><td>Full</td><td><input type="number" min="0" max="300" value="130"></td><td><input type="number" min="0" max="300" value="100"></td><td><input type="number" min="0" max="300" value="95"></td></tr>
+      </table>
+      <b>Delay %</b>
+      <table>
+        <tr><th></th><th>Cold</th><th>Warm</th><th>Hot</th></tr>
+        <tr><td>Closed</td><td><input type="number" min="0" max="300" value="182"></td><td><input type="number" min="0" max="300" value="130"></td><td><input type="number" min="0" max="300" value="117"></td></tr>
+        <tr><td>Half</td><td><input type="number" min="0" max="300" value="161"></td><td><input type="number" min="0" max="300" value="115"></td><td><input type="number" min="0" max="300" value="104"></td></tr>
+        <tr><td>Full</td><td><input type="number" min="0" max="300" value="140"></td><td><input type="number" min="0" max="300" value="100"></td><td><input type="number" min="0" max="300" value="90"></td></tr>
+      </table>
     </fieldset>
     <div class="actions">
       <input type="submit" value="Save">
@@ -151,8 +171,10 @@
     </form>
   </div>
   <script>
-    function toggleTpsWipTuning() {
-      document.getElementById('tpsWipTuning').style.display = document.getElementById('useThrottlePosition').checked ? '' : 'none';
+    function toggleThrottleSections() {
+      var d = document.getElementById('useThrottlePosition').checked ? '' : 'none';
+      document.getElementById('tpsCalibration').style.display = d;
+      document.getElementById('pressureTimeMap').style.display = d;
     }
   </script>
 </body>

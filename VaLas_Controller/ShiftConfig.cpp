@@ -24,7 +24,7 @@ static bool* g_useCanBusPtr = nullptr;
 static bool* g_usePedalShiftersPtr = nullptr;
 static bool* g_useLargeDisplayPtr = nullptr;
 static bool* g_useThrottlePositionPtr = nullptr;
-static VaLas_Controller::ThrottleSettings* g_throttleSettingsPtr = nullptr;
+static VaLas_Controller::ThrottleCalibration* g_throttleSettingsPtr = nullptr;
 static VaLas_Controller::PressureTimeMapSettings* g_pressureTimeMapPtr = nullptr;
 
 // Static default settings for display purposes
@@ -88,7 +88,7 @@ void ShiftConfig::execute(void * parameter)
   bool* usePedalShiftersPtr = parameters->usePedalShiftersPtr;
   bool* useLargeDisplayPtr = parameters->useLargeDisplayPtr;
   bool* useThrottlePositionPtr = parameters->useThrottlePositionPtr;
-  VaLas_Controller::ThrottleSettings* throttleSettingsPtr = parameters->throttleSettingsPtr;
+  VaLas_Controller::ThrottleCalibration* throttleSettingsPtr = parameters->throttleSettingsPtr;
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
   VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr = parameters->pressureTimeMapPtr;
 
@@ -120,7 +120,7 @@ void ShiftConfig::execute(void * parameter)
   vTaskDelay(20);
 }
 
-void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
+void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   // Expose the config pointers now (e.g. for getDisplayIsLarge()) instead of waiting for the
   // web server task's first tick, which runs after displayHandler.begin() during setup().
@@ -147,7 +147,7 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
   }
 }
 
-bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
@@ -172,7 +172,7 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
   return true;
 }
 
-bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
@@ -192,7 +192,7 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   return true;
 }
 
-void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072>& doc)
+void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, StaticJsonDocument<3072>& doc)
 {
   doc.clear();
   doc["UseCanBus"] = *useCanBusPtr;
@@ -201,12 +201,6 @@ void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSett
   doc["UseThrottlePosition"] = *useThrottlePositionPtr;
   doc["TpsClosedAdc"] = throttleSettingsPtr->closedAdc;
   doc["TpsWideOpenAdc"] = throttleSettingsPtr->wideOpenAdc;
-  doc["TpsLowPressurePercent"] = throttleSettingsPtr->lowThrottlePressurePercent;
-  doc["TpsMediumPressurePercent"] = throttleSettingsPtr->mediumThrottlePressurePercent;
-  doc["TpsHighPressurePercent"] = throttleSettingsPtr->highThrottlePressurePercent;
-  doc["TpsLowDelayMs"] = throttleSettingsPtr->lowThrottleDelayMs;
-  doc["TpsMediumDelayMs"] = throttleSettingsPtr->mediumThrottleDelayMs;
-  doc["TpsHighDelayMs"] = throttleSettingsPtr->highThrottleDelayMs;
 
   JsonObject ptm = doc.createNestedObject("PressureTimeMap");
   ptm["Enabled"] = pressureTimeMapPtr->enabled;
@@ -246,7 +240,7 @@ void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSett
 
 }
 
-void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, const StaticJsonDocument<3072>& doc)
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, const StaticJsonDocument<3072>& doc)
 {
   // extract the values
   *useCanBusPtr = doc["UseCanBus"].as<bool>();
@@ -255,12 +249,6 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
   *useThrottlePositionPtr = doc["UseThrottlePosition"].as<bool>();
   throttleSettingsPtr->closedAdc = doc["TpsClosedAdc"] | 0;
   throttleSettingsPtr->wideOpenAdc = doc["TpsWideOpenAdc"] | 4095;
-  throttleSettingsPtr->lowThrottlePressurePercent = doc["TpsLowPressurePercent"] | 70;
-  throttleSettingsPtr->mediumThrottlePressurePercent = doc["TpsMediumPressurePercent"] | 85;
-  throttleSettingsPtr->highThrottlePressurePercent = doc["TpsHighPressurePercent"] | 100;
-  throttleSettingsPtr->lowThrottleDelayMs = doc["TpsLowDelayMs"] | 200;
-  throttleSettingsPtr->mediumThrottleDelayMs = doc["TpsMediumDelayMs"] | 100;
-  throttleSettingsPtr->highThrottleDelayMs = doc["TpsHighDelayMs"] | 0;
 
   VaLas_Controller::PressureTimeMapSettings defaultPtm;
   JsonObjectConst ptm = doc["PressureTimeMap"];
@@ -374,7 +362,7 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   shiftSettings[5].DownshiftTorqueConverterLockup = 0;
 }
 
-void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleSettings* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
+void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr)
 {
   if (!spiffsMountingSuccess)
   {
@@ -447,7 +435,7 @@ static void handleRoot()
   html += g_defaultUseLargeDisplay ? "checked" : "unchecked";
   html += ")<br><hr>";
 
-  html += F("<label><input type='checkbox' id='useThrottlePosition' name='useThrottlePosition' onchange='toggleTpsWipTuning()'");
+  html += F("<label><input type='checkbox' id='useThrottlePosition' name='useThrottlePosition' onchange='toggleThrottleSections()'");
   if (*g_useThrottlePositionPtr) html += F(" checked");
   html += F("> Use throttle position sensor</label>");
   html += " (default: ";
@@ -475,20 +463,13 @@ static void handleRoot()
   html += "<div class='setting-row'><label>TorqueConverterLockup:</label><input type='number' min='0' max='255' name='d" + String(i) + "tc' value='" + String(s.DownshiftTorqueConverterLockup) + "'><span class='hint'>0-255 (default: " + String(d.DownshiftTorqueConverterLockup) + ")</span></div></fieldset><hr>";
   }
 
-  html += *g_useThrottlePositionPtr ? F("<fieldset id='tpsWipTuning'><legend>TPS WIP tuning:</legend>") : F("<fieldset id='tpsWipTuning' style='display:none'><legend>TPS WIP tuning:</legend>");
+  html += *g_useThrottlePositionPtr ? F("<fieldset id='tpsCalibration'><legend>TPS calibration:</legend>") : F("<fieldset id='tpsCalibration' style='display:none'><legend>TPS calibration:</legend>");
   int currentThrottleAdc = sensors.ReadThrottleAdc();
   html += "<div class='setting-row'><label>Current ADC:</label><span>" + String(currentThrottleAdc) + "</span><span class='hint'>move pedal before refreshing</span></div>";
   html += "<div class='setting-row'><label>Closed throttle ADC:</label><input type='number' min='0' max='4095' name='tpsClosedAdc' value='" + String(g_throttleSettingsPtr->closedAdc) + "'><span class='hint'><button type='button' onclick=\"fetch('/calibrate/closed',{method:'POST'}).then(()=>window.location.reload());\">Set current</button></span></div>";
-  html += "<div class='setting-row'><label>Wide-open throttle ADC:</label><input type='number' min='0' max='4095' name='tpsWideOpenAdc' value='" + String(g_throttleSettingsPtr->wideOpenAdc) + "'><span class='hint'><button type='button' onclick=\"fetch('/calibrate/wide-open',{method:'POST'}).then(()=>window.location.reload());\">Set current</button></span></div>";
-  html += "<br>";
-  html += "<div class='setting-row'><label>0-50% pressure:</label><input type='number' min='0' max='100' name='tpsLowPressure' value='" + String(g_throttleSettingsPtr->lowThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 70)</span></div>";
-  html += "<div class='setting-row'><label>50-80% pressure:</label><input type='number' min='0' max='100' name='tpsMediumPressure' value='" + String(g_throttleSettingsPtr->mediumThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 85)</span></div>";
-  html += "<div class='setting-row'><label>80-100% pressure:</label><input type='number' min='0' max='100' name='tpsHighPressure' value='" + String(g_throttleSettingsPtr->highThrottlePressurePercent) + "'><span class='hint'>percent of default configuration (default: 100)</span></div>";
-  html += "<div class='setting-row'><label>0-50% delay:</label><input type='number' min='0' max='500' name='tpsLowDelay' value='" + String(g_throttleSettingsPtr->lowThrottleDelayMs) + "'><span class='hint'>additional ms (default: 200)</span></div>";
-  html += "<div class='setting-row'><label>50-80% delay:</label><input type='number' min='0' max='500' name='tpsMediumDelay' value='" + String(g_throttleSettingsPtr->mediumThrottleDelayMs) + "'><span class='hint'>additional ms (default: 100)</span></div>";
-  html += "<div class='setting-row'><label>80-100% delay:</label><input type='number' min='0' max='500' name='tpsHighDelay' value='" + String(g_throttleSettingsPtr->highThrottleDelayMs) + "'><span class='hint'>additional ms (default: 0)</span></div></fieldset><br><br>";
+  html += "<div class='setting-row'><label>Wide-open throttle ADC:</label><input type='number' min='0' max='4095' name='tpsWideOpenAdc' value='" + String(g_throttleSettingsPtr->wideOpenAdc) + "'><span class='hint'><button type='button' onclick=\"fetch('/calibrate/wide-open',{method:'POST'}).then(()=>window.location.reload());\">Set current</button></span></div></fieldset><br><br>";
 
-  html += F("<fieldset><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>");
+  html += *g_useThrottlePositionPtr ? F("<fieldset id='pressureTimeMap'><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>") : F("<fieldset id='pressureTimeMap' style='display:none'><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>");
   html += F("<label><input type='checkbox' name='ptmEnabled'");
   if (g_pressureTimeMapPtr->enabled) html += F(" checked");
   html += F("> Enable pressure/time map</label><br>");
@@ -531,7 +512,7 @@ static void handleRoot()
   html += F("<input type='file' name='config' accept='.json,application/json' required>");
   html += F(" <input type='submit' value='Import JSON'>");
   html += F("</form>");
-  html += F("<script>function toggleTpsWipTuning(){document.getElementById('tpsWipTuning').style.display=document.getElementById('useThrottlePosition').checked?'':'none';}\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
+  html += F("<script>function toggleThrottleSections(){var d=document.getElementById('useThrottlePosition').checked?'':'none';document.getElementById('tpsCalibration').style.display=d;document.getElementById('pressureTimeMap').style.display=d;}\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
 
   webServer.send(200, "text/html", html);
@@ -552,7 +533,7 @@ static void handleReset()
   *g_usePedalShiftersPtr = g_defaultUsePedalShifters;
   *g_useLargeDisplayPtr = g_defaultUseLargeDisplay;
   *g_useThrottlePositionPtr = g_defaultUseThrottlePosition;
-  *g_throttleSettingsPtr = VaLas_Controller::ThrottleSettings();
+  *g_throttleSettingsPtr = VaLas_Controller::ThrottleCalibration();
   *g_pressureTimeMapPtr = VaLas_Controller::PressureTimeMapSettings();
 
   // Save to SPIFFS
@@ -594,12 +575,6 @@ static void handleSave()
   *g_useThrottlePositionPtr = webServer.hasArg("useThrottlePosition");
   if (webServer.hasArg("tpsClosedAdc")) g_throttleSettingsPtr->closedAdc = constrain(webServer.arg("tpsClosedAdc").toInt(), 0, 4095);
   if (webServer.hasArg("tpsWideOpenAdc")) g_throttleSettingsPtr->wideOpenAdc = constrain(webServer.arg("tpsWideOpenAdc").toInt(), 0, 4095);
-  if (webServer.hasArg("tpsLowPressure")) g_throttleSettingsPtr->lowThrottlePressurePercent = webServer.arg("tpsLowPressure").toInt();
-  if (webServer.hasArg("tpsMediumPressure")) g_throttleSettingsPtr->mediumThrottlePressurePercent = webServer.arg("tpsMediumPressure").toInt();
-  if (webServer.hasArg("tpsHighPressure")) g_throttleSettingsPtr->highThrottlePressurePercent = webServer.arg("tpsHighPressure").toInt();
-  if (webServer.hasArg("tpsLowDelay")) g_throttleSettingsPtr->lowThrottleDelayMs = webServer.arg("tpsLowDelay").toInt();
-  if (webServer.hasArg("tpsMediumDelay")) g_throttleSettingsPtr->mediumThrottleDelayMs = webServer.arg("tpsMediumDelay").toInt();
-  if (webServer.hasArg("tpsHighDelay")) g_throttleSettingsPtr->highThrottleDelayMs = webServer.arg("tpsHighDelay").toInt();
   g_pressureTimeMapPtr->enabled = webServer.hasArg("ptmEnabled");
   if (webServer.hasArg("ptmColdTempC")) g_pressureTimeMapPtr->coldTempC = webServer.arg("ptmColdTempC").toInt();
   if (webServer.hasArg("ptmWarmTempC")) g_pressureTimeMapPtr->warmTempC = webServer.arg("ptmWarmTempC").toInt();
