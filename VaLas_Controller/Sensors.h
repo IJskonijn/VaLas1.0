@@ -7,7 +7,6 @@ class Sensors {
     
 	public:
         Sensors();
-        int ReadAtfTemp();
         int ReadRpm();  // Returns transmission RPM (from N2/N3 sensors)
         int ReadEngineRpm(); // Returns engine RPM (from crankshaft sensor)
         int ReadThrottlePosition(); // Returns optional throttle position as 0-100 percent
