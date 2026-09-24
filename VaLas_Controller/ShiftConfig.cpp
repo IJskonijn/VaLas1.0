@@ -474,7 +474,10 @@ static void handleRoot()
   html += *g_useThrottlePositionPtr ? F("<fieldset id='pressureTimeMap'><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>") : F("<fieldset id='pressureTimeMap' style='display:none'><legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>");
   html += F("<label><input type='checkbox' name='ptmEnabled'");
   if (g_pressureTimeMapPtr->enabled) html += F(" checked");
-  html += F("> Enable pressure/time map</label><br>");
+  html += F("> Enable pressure/time map</label>");
+  html += " (default: ";
+  html += g_defaultPressureTimeMap.enabled ? "checked" : "unchecked";
+  html += ")<br>";
   html += "<div class='setting-row'><label>Cold ATF temp:</label><input type='number' min='-40' max='150' name='ptmColdTempC' value='" + String(g_pressureTimeMapPtr->coldTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.coldTempC) + ")</span></div>";
   html += "<div class='setting-row'><label>Warm ATF temp:</label><input type='number' min='-40' max='150' name='ptmWarmTempC' value='" + String(g_pressureTimeMapPtr->warmTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.warmTempC) + ")</span></div>";
   html += "<div class='setting-row'><label>Hot ATF temp:</label><input type='number' min='-40' max='150' name='ptmHotTempC' value='" + String(g_pressureTimeMapPtr->hotTempC) + "'><span class='hint'>&deg;C (default: " + String(g_defaultPressureTimeMap.hotTempC) + ")</span></div>";

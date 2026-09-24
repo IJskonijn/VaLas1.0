@@ -121,7 +121,7 @@ class VaLas_Controller {
     // and ATF temperature (columns: cold/warm/hot breakpoints). Values are percent of the configured pressure/delay.
     typedef struct
     {
-      bool enabled = false;
+      bool enabled = true;
       int coldTempC = 0;
       int warmTempC = 60;
       int hotTempC = 110;
