@@ -265,17 +265,19 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
     }
   }
 
+  // Clamp imported values to sane ranges; an out-of-range (e.g. negative) delay would wrap to a
+  // huge unsigned value where it is consumed (vTaskDelay / scaleDelay2D) and hang shifting indefinitely.
   for (int i = 0; i < 6; i++)
   {
     shiftSettingsPtr[i].Name = doc["GearShiftSettings"][i]["Name"].as<String>();
-    shiftSettingsPtr[i].UpshiftDelay = doc["GearShiftSettings"][i]["UpshiftDelay"].as<int>();
-    shiftSettingsPtr[i].UpshiftLinePressure = doc["GearShiftSettings"][i]["UpshiftLinePressure"].as<int>();
-    shiftSettingsPtr[i].UpshiftShiftPressure = doc["GearShiftSettings"][i]["UpshiftShiftPressure"].as<int>();
-    shiftSettingsPtr[i].UpshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["UpshiftTorqueConverterLockup"].as<int>();
-    shiftSettingsPtr[i].DownshiftDelay = doc["GearShiftSettings"][i]["DownshiftDelay"].as<int>();
-    shiftSettingsPtr[i].DownshiftLinePressure = doc["GearShiftSettings"][i]["DownshiftLinePressure"].as<int>();
-    shiftSettingsPtr[i].DownshiftShiftPressure = doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>();
-    shiftSettingsPtr[i].DownshiftTorqueConverterLockup = doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>();
+    shiftSettingsPtr[i].UpshiftDelay = constrain(doc["GearShiftSettings"][i]["UpshiftDelay"].as<int>(), 50, 5000);
+    shiftSettingsPtr[i].UpshiftLinePressure = constrain(doc["GearShiftSettings"][i]["UpshiftLinePressure"].as<int>(), 0, 255);
+    shiftSettingsPtr[i].UpshiftShiftPressure = constrain(doc["GearShiftSettings"][i]["UpshiftShiftPressure"].as<int>(), 0, 255);
+    shiftSettingsPtr[i].UpshiftTorqueConverterLockup = constrain(doc["GearShiftSettings"][i]["UpshiftTorqueConverterLockup"].as<int>(), 0, 255);
+    shiftSettingsPtr[i].DownshiftDelay = constrain(doc["GearShiftSettings"][i]["DownshiftDelay"].as<int>(), 50, 5000);
+    shiftSettingsPtr[i].DownshiftLinePressure = constrain(doc["GearShiftSettings"][i]["DownshiftLinePressure"].as<int>(), 0, 255);
+    shiftSettingsPtr[i].DownshiftShiftPressure = constrain(doc["GearShiftSettings"][i]["DownshiftShiftPressure"].as<int>(), 0, 255);
+    shiftSettingsPtr[i].DownshiftTorqueConverterLockup = constrain(doc["GearShiftSettings"][i]["DownshiftTorqueConverterLockup"].as<int>(), 0, 255);
   }
 }
 
@@ -596,15 +598,17 @@ static void handleSave()
 
     VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
 
-    if (webServer.hasArg(baseU + "d"))  s.UpshiftDelay = webServer.arg(baseU + "d").toInt();
-    if (webServer.hasArg(baseU + "lp")) s.UpshiftLinePressure = webServer.arg(baseU + "lp").toInt();
-    if (webServer.hasArg(baseU + "sp")) s.UpshiftShiftPressure = webServer.arg(baseU + "sp").toInt();
-    if (webServer.hasArg(baseU + "tc")) s.UpshiftTorqueConverterLockup = webServer.arg(baseU + "tc").toInt();
+    // Clamp to sane ranges: an out-of-range (e.g. negative) delay would wrap to a huge unsigned
+    // value where it is consumed (vTaskDelay / scaleDelay2D) and hang shifting indefinitely.
+    if (webServer.hasArg(baseU + "d"))  s.UpshiftDelay = constrain(webServer.arg(baseU + "d").toInt(), 50, 5000);
+    if (webServer.hasArg(baseU + "lp")) s.UpshiftLinePressure = constrain(webServer.arg(baseU + "lp").toInt(), 0, 255);
+    if (webServer.hasArg(baseU + "sp")) s.UpshiftShiftPressure = constrain(webServer.arg(baseU + "sp").toInt(), 0, 255);
+    if (webServer.hasArg(baseU + "tc")) s.UpshiftTorqueConverterLockup = constrain(webServer.arg(baseU + "tc").toInt(), 0, 255);
 
-    if (webServer.hasArg(baseD + "d"))  s.DownshiftDelay = webServer.arg(baseD + "d").toInt();
-    if (webServer.hasArg(baseD + "lp")) s.DownshiftLinePressure = webServer.arg(baseD + "lp").toInt();
-    if (webServer.hasArg(baseD + "sp")) s.DownshiftShiftPressure = webServer.arg(baseD + "sp").toInt();
-    if (webServer.hasArg(baseD + "tc")) s.DownshiftTorqueConverterLockup = webServer.arg(baseD + "tc").toInt();
+    if (webServer.hasArg(baseD + "d"))  s.DownshiftDelay = constrain(webServer.arg(baseD + "d").toInt(), 50, 5000);
+    if (webServer.hasArg(baseD + "lp")) s.DownshiftLinePressure = constrain(webServer.arg(baseD + "lp").toInt(), 0, 255);
+    if (webServer.hasArg(baseD + "sp")) s.DownshiftShiftPressure = constrain(webServer.arg(baseD + "sp").toInt(), 0, 255);
+    if (webServer.hasArg(baseD + "tc")) s.DownshiftTorqueConverterLockup = constrain(webServer.arg(baseD + "tc").toInt(), 0, 255);
   }
 
   // Persist to SPIFFS via ShiftConfig wrapper

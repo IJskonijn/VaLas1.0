@@ -62,10 +62,6 @@ VaLas_Controller::ShiftRequest Gearlever_Modded::GetShiftRequest(VaLas_Controlle
 
 void Gearlever_Modded::readGearLeverPosition(VaLas_Controller::GearLeverPosition* currentLeverPosition)
 {
-  //Test
-  *currentLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
-  return;
-
   int leverValue = analogRead(gearLeverPotPin);
   vTaskDelay(15);
   //Serial.println("lever sensor val: " + String(leverValue));

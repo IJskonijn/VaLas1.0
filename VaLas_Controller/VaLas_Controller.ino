@@ -38,9 +38,9 @@ ShiftControlV2 shiftControlV2;
 ShiftConfig shiftConfig;
 Gearlever* gearLeverInterface;
 
-bool initial_UseCanBus = true; // Default is false
-bool initial_UsePedalShifters = true; // Default is false
-bool initial_UseLargeDisplay = true; // Default is false
+bool initial_UseCanBus = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
+bool initial_UsePedalShifters = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
+bool initial_UseLargeDisplay = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
 bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
