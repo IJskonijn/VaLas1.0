@@ -27,6 +27,10 @@ class ShiftControlV2 {
 		int activeReducedLinePressure = 0;
 		int activeReducedShiftPressure = 0;
 
+		// Trend-gated lockup for gears 3-5 (gear 5+ keeps its own fixed-95% logic, untouched by this)
+		bool lockupEngaged = false;
+		unsigned long lockupPendingSinceMs = 0;
+
 		void processLeverValues(VaLas_Controller::GearLeverPosition oldLeverPosition, VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear);
 		void resetToGear2(VaLas_Controller::GearLeverPosition currentLeverPosition, int* gear);
 		void startDownShift(int customMpcAfterShift, VaLas_Controller::GearLeverPosition currentLeverPosition, int gear, int atfTempC);
@@ -35,6 +39,7 @@ class ShiftControlV2 {
 		void startSelectFiveToFivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear, int atfTempC);
 		void tick();
 		void finishShift();
+		void updateLockup(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear);
 		int getEffectiveThrottlePosition();
 		int getPressurePercent(int throttlePosition, int atfTempC);
 		int getDelayPercent(int throttlePosition, int atfTempC);

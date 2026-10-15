@@ -15,6 +15,9 @@ VaLas_Controller::DisplayScreen* screenToDisplayValueV2;
 VaLas_Controller::ShiftSetting* gearboxSettingsV2;
 int* throttlePositionPointerV2;
 VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPointerV2;
+int* calculatedRpmPointerV2;
+int* rpmTrendPointerV2;
+VaLas_Controller::LockupControlSettings* lockupSettingsPointerV2;
 
 void ShiftControlV2::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr,
   VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr)
@@ -35,6 +38,9 @@ void ShiftControlV2::execute(void * parameter)
   int* gear = parameters->gearPtr;
   throttlePositionPointerV2 = parameters->throttlePositionPtr;
   pressureTimeMapPointerV2 = parameters->pressureTimeMapPtr;
+  calculatedRpmPointerV2 = parameters->calculatedRpmPtr;
+  rpmTrendPointerV2 = parameters->rpmTrendPtr;
+  lockupSettingsPointerV2 = parameters->lockupSettingsPtr;
   int atfTempC = parameters->atfTempPtr ? *(parameters->atfTempPtr) : 90; // Fall back to a warmed-up assumption if not wired
   VaLas_Controller::GearLeverPosition oldLeverPosition = *(parameters->oldLeverPositionPtr);
   VaLas_Controller::GearLeverPosition currentLeverPosition = *(parameters->currentLeverPositionPtr);
@@ -48,6 +54,7 @@ void ShiftControlV2::execute(void * parameter)
   }
 
   processLeverValues(oldLeverPosition, currentLeverPosition, gear);
+  updateLockup(currentLeverPosition, *gear);
 
   // Only process shift requests in Drive or Reverse
   if ((currentLeverPosition != VaLas_Controller::GearLeverPosition::Drive && currentLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
@@ -209,7 +216,10 @@ void ShiftControlV2::startDownShift(int customMpcAfterShift, VaLas_Controller::G
   ledcWrite(pwmChannelsPointerV2->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointerV2->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
-  ledcWrite(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear].DownshiftTorqueConverterLockup);
+  // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
+  ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+  lockupEngaged = false;
+  lockupPendingSinceMs = 0;
 
   activeGearPin = gearPin;
   activeFinalMpc = scalePressure2D(customMpcAfterShift, throttlePosition, atfTempC);
@@ -245,7 +255,10 @@ void ShiftControlV2::startUpShift(int customMpcAfterShift, VaLas_Controller::Gea
   ledcWrite(pwmChannelsPointerV2->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointerV2->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
-  ledcWrite(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 2].UpshiftTorqueConverterLockup);
+  // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
+  ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+  lockupEngaged = false;
+  lockupPendingSinceMs = 0;
 
   activeGearPin = gearPin;
   activeFinalMpc = scalePressure2D(customMpcAfterShift, throttlePosition, atfTempC);
@@ -342,6 +355,50 @@ void ShiftControlV2::finishShift()
 
   phase = Phase::Idle;
   *screenToDisplayValueV2 = VaLas_Controller::DisplayScreen::Main;
+}
+
+// Trend-gated lockup for gears 3-5 while cruising; gear 5+ keeps its own fixed-95% lockup above.
+// Reuses each gear's (otherwise idle, since Normal shifts now always release TCC) UpshiftTorqueConverterLockup
+// value as the steady-state lockup target duty.
+void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
+{
+  // calculatedRpm is turbine/input-shaft RPM, not road speed, and means a very different road speed
+  // per gear - divide by the gear ratio so the same minOutputShaftRpm threshold is fair across gears.
+  float gearRatio = (lockupSettingsPointerV2 && gear >= 1 && gear <= 5) ? lockupSettingsPointerV2->gearRatios[gear - 1] : 1.0f;
+  int outputShaftRpm = (calculatedRpmPointerV2 && gearRatio > 0.01f) ? (int)(*calculatedRpmPointerV2 / gearRatio) : 0;
+
+  bool conditionsOk = lockupSettingsPointerV2 && lockupSettingsPointerV2->enabled && phase == Phase::Idle
+    && currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive
+    && gear >= lockupSettingsPointerV2->minGear && gear <= 5 // Gear 6 (5+) is handled separately above
+    && outputShaftRpm >= lockupSettingsPointerV2->minOutputShaftRpm
+    && getEffectiveThrottlePosition() <= lockupSettingsPointerV2->maxThrottleForEngage
+    && rpmTrendPointerV2 && *rpmTrendPointerV2 > -lockupSettingsPointerV2->decelRpmPerSecThreshold;
+
+  if (!conditionsOk)
+  {
+    lockupPendingSinceMs = 0;
+    if (lockupEngaged)
+    {
+      ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+      lockupEngaged = false;
+    }
+    return;
+  }
+
+  if (lockupEngaged)
+    return;
+
+  if (lockupPendingSinceMs == 0)
+  {
+    lockupPendingSinceMs = millis();
+    return;
+  }
+
+  if (millis() - lockupPendingSinceMs < (unsigned long)lockupSettingsPointerV2->engageDelayMs)
+    return;
+
+  ledcWrite(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 1].UpshiftTorqueConverterLockup);
+  lockupEngaged = true;
 }
 
 // Bilinear interpolation over a 3x3 grid: rows are closed/half/full throttle (fixed 0/50/100),

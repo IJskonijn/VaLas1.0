@@ -136,6 +136,26 @@ class VaLas_Controller {
         {140, 100, 90}   // Full throttle:    cold, warm, hot
       };
     } PressureTimeMapSettings;
+
+    // Trend-gated torque converter lockup for gears 3-5 (ShiftControlV2 only). Gear 5+ keeps its
+    // own fixed 95% lockup, unaffected by this. Per-gear target duty is the existing
+    // ShiftSetting.UpshiftTorqueConverterLockup value (index gear-1), reused as the steady-state
+    // lockup target rather than a momentary shift-event value.
+    typedef struct
+    {
+      bool enabled = false;
+      int minGear = 3;                   // Lowest gear allowed to lock up (3, 4 or 5)
+      int minOutputShaftRpm = 1200;       // Don't engage below this gear-ratio-normalized output-shaft RPM (not calculatedRpm directly - see gearRatios)
+      int maxThrottleForEngage = 55;      // Don't engage above this throttle % (avoid locking under load)
+      int decelRpmPerSecThreshold = 150;  // RPM/sec drop that blocks/releases lockup (coast/braking)
+      int engageDelayMs = 800;            // Steady-state dwell required before engaging
+      // Typical 722.6 ratios (1st..5th); confirm/adjust for the exact variant fitted. Used only to
+      // 722.6/5G-Tronic 1st-5th ratios (pre-2004; see en.wikipedia.org/wiki/Mercedes-Benz_5G-Tronic_transmission).
+      // Default here is the W5A580 "big case" (580Nm+) set, matching this controller's own box;
+      // W5A330 "small case" (<=330Nm) is 3.9319/2.4079/1.4857/1.0000/0.8305. Used only to normalize
+      // minOutputShaftRpm across gears - calculatedRpm (turbine RPM) / gearRatios[gear-1].
+      float gearRatios[5] = {3.5876f, 2.1862f, 1.4054f, 1.0000f, 0.8314f};
+    } LockupControlSettings;
 		
 	private:
 };
