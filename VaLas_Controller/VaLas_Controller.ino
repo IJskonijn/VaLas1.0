@@ -38,14 +38,15 @@ ShiftControlV2 shiftControlV2;
 ShiftConfig shiftConfig;
 Gearlever* gearLeverInterface;
 
-bool initial_UseCanBus = true; // Default is false
-bool initial_UsePedalShifters = true; // Default is false
-bool initial_UseLargeDisplay = true; // Default is false
+bool initial_UseCanBus = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
+bool initial_UsePedalShifters = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
+bool initial_UseLargeDisplay = true; // Also the first-boot default (see ShiftConfig::initDefaultSettings)
 bool initial_UseThrottlePosition = false;
 VaLas_Controller::ShiftSetting initial_GearboxSettings[6];
 VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSettings;
 VaLas_Controller::ThrottleCalibration initial_ThrottleCalibration;
 VaLas_Controller::PressureTimeMapSettings initial_PressureTimeMapSettings;
+VaLas_Controller::LockupControlSettings initial_LockupControlSettings;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
 
@@ -58,6 +59,7 @@ int initial_AtfTemp;
 int initial_N2Rpm;
 int initial_N3Rpm;
 int initial_CalculatedRpm;
+int initial_RpmTrend;
 int initial_EngineRpm;
 int initial_ThrottlePosition;
 
@@ -81,7 +83,10 @@ TaskStructs::ShiftControlParameters shiftControlParameters
   &initial_UseThrottlePosition,
   &initial_ThrottleCalibration,
   &initial_AtfTemp,
-  &initial_PressureTimeMapSettings
+  &initial_PressureTimeMapSettings,
+  &initial_CalculatedRpm,
+  &initial_RpmTrend,
+  &initial_LockupControlSettings
 };
 
 TaskStructs::ShiftConfigParameters shiftConfigParameters
@@ -92,7 +97,8 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_UseThrottlePosition,
   initial_GearboxSettingsPtr,
   &initial_ThrottleCalibration,
-  &initial_PressureTimeMapSettings
+  &initial_PressureTimeMapSettings,
+  &initial_LockupControlSettings
 };
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
@@ -110,6 +116,7 @@ TaskStructs::SensorParameters sensorParameters
   &initial_N2Rpm,
   &initial_N3Rpm,
   &initial_CalculatedRpm,
+  &initial_RpmTrend,
   &initial_ThrottlePosition,
   &initial_UseThrottlePosition,
   &initial_ThrottleCalibration
@@ -130,6 +137,7 @@ void setup()
   initial_N2Rpm = 0;
   initial_N3Rpm = 0;
   initial_CalculatedRpm = 0;
+  initial_RpmTrend = 0;
   initial_EngineRpm = 0;
   initial_ThrottlePosition = -1;
   initial_UseThrottlePosition = false;
@@ -152,6 +160,13 @@ void setup()
   VaLas_Controller::EngineType engineType = VaLas_Controller::EngineType::OM606;  // Change this!
   VaLas_Controller::RpmGaugeType gaugeType = VaLas_Controller::RpmGaugeType::Mercedes300E;  // Change this!
   sensors.SetEngineConfig(engineType, gaugeType);
+  sensors.setupInputSpeedPcnt();
+
+  Serial.println("N2/N3 sensor test: watch the periodic [N2N3] lines below, or open http://<AP IP>/ and expand 'Debug: N2/N3 sensor test'.");
+  Serial.println(" - pulses: raw counts since last read; spin the output shaft by hand (ignition on, engine off) to confirm they move at all.");
+  Serial.println(" - n2Rpm/n3Rpm: should read ~equal in gears 2/3/4; n2Rpm near 0 in reverse (R1/R2).");
+  Serial.println(" - sane=0 means n2Rpm/n3Rpm disagree too much - check wiring if this stays 0 while moving.");
+  Serial.println(" - trend: ~0 at steady cruise, positive under acceleration, negative on lift-off/braking.");
 
   shiftConfig.init();
   
@@ -188,7 +203,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings, &initial_LockupControlSettings);
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
@@ -317,6 +332,7 @@ void sensorHandlerTask(void* parameter){
       *(params->n2RpmPtr) = n2Rpm;
       *(params->n3RpmPtr) = n3Rpm;
       *(params->calculatedRpmPtr) = calcRpm;
+      *(params->rpmTrendPtr) = sensors.GetRpmTrendPerSec();
     }
     
     // Read engine RPM for diagnostics/display data; optional gauge output is disabled.

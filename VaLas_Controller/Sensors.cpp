@@ -18,21 +18,17 @@ const int n3PulsesPerRev = 60;
 #define ADC_CHANNEL_ATF adc2_channel_t::ADC2_CHANNEL_9
 #define ADC2_ATTEN ADC_ATTEN_11db
 #define ADC2_WIDTH ADC_WIDTH_12Bit
-#define TIMER_INTERVAL_MS 20 // Every 20ms we poll RPM (Same as other ECUs)
-#define PULSE_MULTIPLIER 1000/TIMER_INTERVAL_MS
 
 portMUX_TYPE n2_mux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE n3_mux = portMUX_INITIALIZER_UNLOCKED;
 
-uint64_t n2_overflow = 0;
-uint64_t n3_overflow = 0;
-
-volatile uint64_t n2_rpm = 0;
-volatile uint64_t n3_rpm = 0;
-
 const pcnt_unit_t PCNT_N2_RPM = PCNT_UNIT_0;
 const pcnt_unit_t PCNT_N3_RPM = PCNT_UNIT_1;
 const pcnt_unit_t PCNT_ENGINE_RPM = PCNT_UNIT_2;
+
+// Max int16 so a pulse burst can never silently wrap the hardware counter between our ~100ms reads
+// (the previous PCNT_H_LIM=1200 was sized for an unimplemented 20ms ISR-driven clear cycle).
+#define PCNT_SPEED_H_LIM 32767
 
 // Engine RPM variables
 portMUX_TYPE engine_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -114,37 +110,144 @@ const static temp_reading_t atf_temp_lookup[NUM_TEMP_POINTS] = {
     {851, 1700}
 };
 
+void Sensors::setupInputSpeedPcnt() {
+    pcnt_config_t n2Config = {};
+    n2Config.pulse_gpio_num = PIN_N2;
+    n2Config.ctrl_gpio_num = PCNT_PIN_NOT_USED;
+    n2Config.channel = PCNT_CHANNEL_0;
+    n2Config.unit = PCNT_N2_RPM;
+    n2Config.pos_mode = PCNT_COUNT_INC; // Count both edges for 2x resolution (halved back out in read_input_rpm)
+    n2Config.neg_mode = PCNT_COUNT_INC;
+    n2Config.lctrl_mode = PCNT_MODE_KEEP;
+    n2Config.hctrl_mode = PCNT_MODE_KEEP;
+    n2Config.counter_h_lim = PCNT_SPEED_H_LIM;
+    n2Config.counter_l_lim = 0;
+
+    pcnt_config_t n3Config = n2Config;
+    n3Config.pulse_gpio_num = PIN_N3;
+    n3Config.unit = PCNT_N3_RPM;
+
+    // GPIO34-39 are input-only with no internal pull resistor; the sensor harness supplies its own bias.
+    pinMode(PIN_N2, INPUT);
+    pinMode(PIN_N3, INPUT);
+
+    pcnt_unit_config(&n2Config);
+    pcnt_set_filter_value(PCNT_N2_RPM, 200); // ~2.5us glitch filter at the 80MHz APB clock
+    pcnt_filter_enable(PCNT_N2_RPM);
+    pcnt_counter_pause(PCNT_N2_RPM);
+    pcnt_counter_clear(PCNT_N2_RPM);
+    pcnt_counter_resume(PCNT_N2_RPM);
+
+    pcnt_unit_config(&n3Config);
+    pcnt_set_filter_value(PCNT_N3_RPM, 200);
+    pcnt_filter_enable(PCNT_N3_RPM);
+    pcnt_counter_pause(PCNT_N3_RPM);
+    pcnt_counter_clear(PCNT_N3_RPM);
+    pcnt_counter_resume(PCNT_N3_RPM);
+
+    lastSpeedReadTime = 0;
+    lastCalcRpm = -1;
+    rpmTrendPerSec = 0;
+}
+
 bool Sensors::read_input_rpm(int& n2Rpm, int& n3Rpm, int& calcRpm, bool check_sanity) {
-    n2Rpm = ((float)n2_rpm * (float)PULSE_MULTIPLIER * 0.5); // *0.5 as counting both Inc and Dec pulse dir
-    n3Rpm = ((float)n3_rpm * (float)PULSE_MULTIPLIER * 0.5); // *0.5 as counting both Inc and Dec pulse dir
-    //ESP_LOGI("RPM", "N2 %d, N3 %d", n2Rpm, n3Rpm);
-    if (n2Rpm < 10 && n3Rpm < 10) { // Stationary, break here to avoid divideBy0Ex
-        calcRpm = 0;
+    int16_t n2Pulses = 0, n3Pulses = 0;
+    uint32_t currentTime = millis();
+
+    portENTER_CRITICAL(&n2_mux);
+    pcnt_get_counter_value(PCNT_N2_RPM, &n2Pulses);
+    pcnt_counter_clear(PCNT_N2_RPM);
+    portEXIT_CRITICAL(&n2_mux);
+
+    portENTER_CRITICAL(&n3_mux);
+    pcnt_get_counter_value(PCNT_N3_RPM, &n3Pulses);
+    pcnt_counter_clear(PCNT_N3_RPM);
+    portEXIT_CRITICAL(&n3_mux);
+
+    if (lastSpeedReadTime == 0) {
+        lastSpeedReadTime = currentTime;
+        n2Rpm = n3Rpm = calcRpm = 0;
         return true;
+    }
+
+    uint32_t deltaMs = currentTime - lastSpeedReadTime;
+    lastSpeedReadTime = currentTime;
+    if (deltaMs == 0) {
+        n2Rpm = n3Rpm = calcRpm = 0;
+        return true;
+    }
+
+    // Each physical pulse is counted twice (rising+falling edge), so halve before converting to RPM.
+    n2Rpm = (int)(((float)n2Pulses * 0.5f * 60000.0f) / ((float)n2PulsesPerRev * (float)deltaMs));
+    n3Rpm = (int)(((float)n3Pulses * 0.5f * 60000.0f) / ((float)n3PulsesPerRev * (float)deltaMs));
+
+    bool sane = true;
+    if (n2Rpm < 10 && n3Rpm < 10) { // Stationary, avoid divideBy0Ex
+        calcRpm = 0;
     } else if (n2Rpm == 0) { // In gears R1 or R2 (as N2 is 0)
         calcRpm = n3Rpm;
-        return true;
+    } else if (abs(n2Rpm - n3Rpm) < 50) {
+        calcRpm = (n2Rpm + n3Rpm) / 2;
     } else {
-        if (abs((int)n2Rpm - (int)n3Rpm) < 50) {
-            calcRpm = (n2Rpm+n3Rpm)/2;
-            return true;
-        }
         // More difficult calculation for all forward gears
         // This calculation works when both RPM sensors are the same (Gears 2,3,4)
         // Or when N3 is 0 and N2 is reporting ~0.61x real Rpm (Gears 1 and 5)
         // Also nicely handles transitionary phases between RPM readings, making gear shift RPM readings
         // a lot more accurate for the rest of the TCM code
-        
-        float ratio = (float)n3Rpm/(float)n2Rpm;
+        float ratio = (float)n3Rpm / (float)n2Rpm;
         float f2 = (float)n2Rpm;
         float f3 = (float)n3Rpm;
 
-        calcRpm = ((f2*1.64f)*(1.0f-ratio))+(f3*ratio);
+        calcRpm = (int)(((f2 * 1.64f) * (1.0f - ratio)) + (f3 * ratio));
 
         // If we need to check sanity, check it, in gears 2,3 and 4, RPM readings should be the same,
         // otherwise we have a faulty conductor place sensor!
-        return check_sanity ? abs((int)n2Rpm - (int)n3Rpm) < 150 : true;
+        sane = abs(n2Rpm - n3Rpm) < 150;
     }
+
+    // Relative RPM trend (not calibrated to real speed) - enough to tell accelerating from decelerating.
+    if (lastCalcRpm >= 0)
+        rpmTrendPerSec = (int)((calcRpm - lastCalcRpm) * 1000.0f / (float)deltaMs);
+    lastCalcRpm = calcRpm;
+    lastN2Pulses = n2Pulses;
+    lastN3Pulses = n3Pulses;
+    lastN2Rpm = n2Rpm;
+    lastN3Rpm = n3Rpm;
+
+    // Throttled diagnostic print - raw pulse counts are the ground truth for confirming the sensors
+    // are actually wired/counting; the derived RPMs/trend confirm the gear-ratio math on top of that.
+    static uint32_t lastRpmDebugMs = 0;
+    if (millis() - lastRpmDebugMs >= 500) {
+        lastRpmDebugMs = millis();
+        Serial.printf("[N2N3] n2Pulses=%d n3Pulses=%d n2Rpm=%d n3Rpm=%d calcRpm=%d trend=%d/s sane=%d\n",
+            n2Pulses, n3Pulses, n2Rpm, n3Rpm, calcRpm, rpmTrendPerSec, sane);
+    }
+
+    return check_sanity ? sane : true;
+}
+
+int Sensors::GetRpmTrendPerSec() {
+    return rpmTrendPerSec;
+}
+
+int Sensors::GetLastN2Pulses() {
+    return lastN2Pulses;
+}
+
+int Sensors::GetLastN3Pulses() {
+    return lastN3Pulses;
+}
+
+int Sensors::GetLastN2Rpm() {
+    return lastN2Rpm;
+}
+
+int Sensors::GetLastN3Rpm() {
+    return lastN3Rpm;
+}
+
+int Sensors::GetLastCalculatedRpm() {
+    return lastCalcRpm;
 }
 
 // Returns ATF temp in *C

@@ -187,6 +187,8 @@ void Gearlever_CAN::readCanBus()
 {
   // Do the actual CAN Bus reading here
 
+  if (CAN.checkReceive() == CAN_MSGAVAIL)
+  {
     CAN.readMsgBuf(&rxId, &len, rxBuf);
 
     // for(byte i = 0; i<len; i++){
@@ -200,6 +202,5 @@ void Gearlever_CAN::readCanBus()
       Serial.println("Buff length: " + String(len));
       Serial.println("Shifterpositie: " + String(canValue));
     }
-
-  delay(50);
+  }
 }

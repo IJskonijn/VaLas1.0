@@ -43,6 +43,16 @@
     <label><input type="checkbox" id="useThrottlePosition" onchange="toggleThrottleSections()"> Use throttle position sensor</label>
     <span class="hint">(default: unchecked)</span>
 
+    <details id="n2n3Debug">
+      <summary>Debug: N2/N3 sensor test</summary>
+      <p class="hint">Works the same in V1 or V2 (not tied to the throttle position toggle above). Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>
+      <label>N2 / N3 pulses: <span>- / -</span></label><br>
+      <label>N2 / N3 RPM: <span>- / -</span></label><br>
+      <label>Calculated RPM: <span>-</span></label><br>
+      <label>RPM trend: <span>-</span></label>
+      <p class="hint">N2/N3 RPM should read ~equal in gears 2/3/4, and N2 near 0 in reverse (R1/R2). Trend should sit near 0 at steady cruise, go positive under acceleration, and swing negative on lift-off/braking. Live on the device (polls /n2n3-debug every 500ms while expanded); static placeholder in this preview.</p>
+    </details>
+
     <h3>D1</h3>
     <fieldset><legend>Upshift:</legend>
       <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
@@ -76,7 +86,7 @@
         <label>Delay: <input type="number" min="300" max="1500" value="1200"></label><span class="hint">(default: 1200 ms)</span><br>
       <label>LinePressure: <input type="number" min="0" max="255" value="90"> </label><span class="hint">(0-255; default: 90)</span><br>
       <label>ShiftPressure: <input type="number" min="0" max="255" value="100"> </label><span class="hint">(0-255; default: 100)</span><br>
-      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="150"> </label><span class="hint">(0-255; default: 150)</span>
     </fieldset>
     <fieldset><legend>Downshift:</legend>
         <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
@@ -90,7 +100,7 @@
         <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
       <label>LinePressure: <input type="number" min="0" max="255" value="100"> </label><span class="hint">(0-255; default: 100)</span><br>
       <label>ShiftPressure: <input type="number" min="0" max="255" value="120"> </label><span class="hint">(0-255; default: 120)</span><br>
-      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="190"> </label><span class="hint">(0-255; default: 190)</span>
     </fieldset>
     <fieldset><legend>Downshift:</legend>
         <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
@@ -104,7 +114,7 @@
         <label>Delay: <input type="number" min="300" max="1500" value="400"></label><span class="hint">(default: 400 ms)</span><br>
       <label>LinePressure: <input type="number" min="0" max="255" value="25"> </label><span class="hint">(0-255; default: 25)</span><br>
       <label>ShiftPressure: <input type="number" min="0" max="255" value="0"> </label><span class="hint">(0-255; default: 0)</span><br>
-      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="255"> </label><span class="hint">(0-255; default: 255)</span>
+      <label>TorqueConverterLockup: <input type="number" min="0" max="255" value="220"> </label><span class="hint">(0-255; default: 220)</span>
     </fieldset>
     <fieldset><legend>Downshift:</legend>
         <label>Delay: <input type="number" min="300" max="1500" value="600"></label><span class="hint">(default: 600 ms)</span><br>
@@ -129,14 +139,15 @@
     <br><br>
     <fieldset id="tpsCalibration" style="display: none;">
       <legend>TPS calibration:</legend>
-      <label>Current ADC: <span>0</span></label><span class="hint">move pedal before refreshing</span><br>
+      <label>Current ADC: <span>0</span></label><span class="hint">live on the device (polls /tps-adc every 500ms); static placeholder in this preview</span><br>
       <label>Closed throttle ADC: <input type="number" min="0" max="4095" value="0"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as closed throttle.');">Set current</button></span><br>
       <label>Wide-open throttle ADC: <input type="number" min="0" max="4095" value="4095"></label><span class="hint"><button type="button" onclick="alert('Preview only: the current ADC value would be saved as wide-open throttle.');">Set current</button></span>
     </fieldset>
     <br>
     <fieldset id="pressureTimeMap" style="display: none;">
       <legend>Pressure/time map (ShiftControlV2 only, throttle x ATF temp):</legend>
-      <label><input type="checkbox"> Enable pressure/time map</label><br>
+      <label><input type="checkbox" checked> Enable pressure/time map</label>
+      <span class="hint">(default: checked)</span><br>
       <label>Cold ATF temp: <input type="number" min="-40" max="150" value="0"></label><span class="hint">&deg;C (default: 0)</span><br>
       <label>Warm ATF temp: <input type="number" min="-40" max="150" value="60"></label><span class="hint">&deg;C (default: 60)</span><br>
       <label>Hot ATF temp: <input type="number" min="-40" max="150" value="110"></label><span class="hint">&deg;C (default: 110)</span><br>
@@ -156,6 +167,30 @@
         <tr><td>Full</td><td><input type="number" min="0" max="300" value="140"></td><td><input type="number" min="0" max="300" value="100"></td><td><input type="number" min="0" max="300" value="90"></td></tr>
       </table>
     </fieldset>
+    <fieldset id="lockupSettings" style="display:none">
+      <legend>Torque converter lockup (trend-based, gears 3-5; gear 5+ always locks up):</legend>
+      <label><input type="checkbox"> Enable trend-based lockup</label>
+      <span class="hint">(default: unchecked)</span><br>
+      <label>Lowest gear: <input type="number" min="2" max="5" value="3"></label><span class="hint">2-5 (default: 3)</span><br>
+      <label>Min output-shaft RPM: <input type="number" min="0" max="8000" value="1200"></label><span class="hint">RPM, gear-ratio normalized - NOT a road speed (default: 1200)</span><br>
+      <p class="hint">This box has no calibrated road-speed sensor. "Min output-shaft RPM" is the measured turbine RPM divided by the current gear's ratio below, which is proportional to road speed but not a speed reading itself. Dividing by the ratio means the same number here represents roughly the same road speed whether you're cruising in 3rd or 5th, instead of a raw RPM that means a very different speed in each gear.</p>
+      <label>Max throttle to engage: <input type="number" min="0" max="100" value="55"></label><span class="hint">% (default: 55)</span><br>
+      <label>Decel threshold: <input type="number" min="0" max="5000" value="150"></label><span class="hint">RPM/sec (default: 150)</span><br>
+      <label>Engage dwell: <input type="number" min="0" max="10000" value="800"></label><span class="hint">ms (default: 800)</span>
+      <p class="hint">Gear ratios (for the RPM normalization above only - not used for shifting). Confirm these match your exact 722.6 variant.</p>
+      <label style="width:auto;white-space:normal;display:block"><input type="radio" id="gearRatioPresetSmall" name="gearRatioPreset" onclick="applyGearRatioPreset('small')"> Small case (&le;330 Nm)</label>
+      <label style="width:auto;white-space:normal;display:block"><input type="radio" id="gearRatioPresetBig" name="gearRatioPreset" onclick="applyGearRatioPreset('big')"> Big case (580 Nm+)</label>
+      <label><input type="checkbox" id="gearRatioExpertMode" onchange="toggleGearRatioExpertMode()"> Expert mode: edit gear ratios manually</label><br>
+      <div id="gearRatioFields" style="display:none">
+      <p class="hint">722.6/5G-Tronic 1st-5th ratios (pre-2004 figures). Small case: 3.9319/2.4079/1.4857/1.0000/0.8305. Big case: 3.5876/2.1862/1.4054/1.0000/0.8314. Edit the fields below if your specific variant differs.</p>
+      <label>Gear 1 ratio: <input type="number" step="any" min="0.1" max="10" name="lockupRatio0" value="3.5876"></label><span class="hint">default: 3.5876</span><br>
+      <label>Gear 2 ratio: <input type="number" step="any" min="0.1" max="10" name="lockupRatio1" value="2.1862"></label><span class="hint">default: 2.1862</span><br>
+      <label>Gear 3 ratio: <input type="number" step="any" min="0.1" max="10" name="lockupRatio2" value="1.4054"></label><span class="hint">default: 1.4054</span><br>
+      <label>Gear 4 ratio: <input type="number" step="any" min="0.1" max="10" name="lockupRatio3" value="1.0000"></label><span class="hint">default: 1.0000</span><br>
+      <label>Gear 5 ratio: <input type="number" step="any" min="0.1" max="10" name="lockupRatio4" value="0.8314"></label><span class="hint">default: 0.8314</span>
+      </div>
+      <p class="hint">Per-gear target duty reuses that gear's Upshift TorqueConverterLockup field above (gears 3-5). Requires N2/N3 speed sensors and ShiftControlV2.</p>
+    </fieldset>
     <div class="actions">
       <input type="submit" value="Save">
       <button type="button" onclick="alert('Preview only: defaults would be restored on the ESP32.');">Reset</button>
@@ -171,11 +206,43 @@
     </form>
   </div>
   <script>
+    var GEAR_RATIO_PRESETS = { small: [3.9319, 2.4079, 1.4857, 1.0000, 0.8305], big: [3.5876, 2.1862, 1.4054, 1.0000, 0.8314] };
     function toggleThrottleSections() {
       var d = document.getElementById('useThrottlePosition').checked ? '' : 'none';
       document.getElementById('tpsCalibration').style.display = d;
       document.getElementById('pressureTimeMap').style.display = d;
+      document.getElementById('lockupSettings').style.display = d;
     }
+    function applyGearRatioPreset(which) {
+      var ratios = GEAR_RATIO_PRESETS[which];
+      for (var i = 0; i < 5; i++) {
+        document.getElementsByName('lockupRatio' + i)[0].value = ratios[i];
+      }
+    }
+    function toggleGearRatioExpertMode() {
+      document.getElementById('gearRatioFields').style.display = document.getElementById('gearRatioExpertMode').checked ? '' : 'none';
+    }
+    function matchesPreset(ratios, current) {
+      for (var i = 0; i < 5; i++) {
+        if (Math.abs(ratios[i] - current[i]) > 0.001) return false;
+      }
+      return true;
+    }
+    function detectGearRatioPreset() {
+      var current = [];
+      for (var i = 0; i < 5; i++) {
+        current.push(parseFloat(document.getElementsByName('lockupRatio' + i)[0].value));
+      }
+      if (matchesPreset(GEAR_RATIO_PRESETS.small, current)) {
+        document.getElementById('gearRatioPresetSmall').checked = true;
+      } else if (matchesPreset(GEAR_RATIO_PRESETS.big, current)) {
+        document.getElementById('gearRatioPresetBig').checked = true;
+      } else {
+        document.getElementById('gearRatioExpertMode').checked = true;
+        toggleGearRatioExpertMode();
+      }
+    }
+    detectGearRatioPreset();
   </script>
 </body>
 </html>
