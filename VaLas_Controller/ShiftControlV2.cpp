@@ -66,7 +66,7 @@ void ShiftControlV2::execute(void * parameter)
   // Check for the up_shift in Drive
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::UpShift)
   {
-    Serial.println("Upshift detected");
+    Serial.println("Upshift detected, using ShiftControl V2");
     Serial.println("Current gear before upshift " + String(*gear));
     if ((*gear >= 1) && (*gear <= 5))
     {
@@ -99,7 +99,7 @@ void ShiftControlV2::execute(void * parameter)
   // check for the down_shift
   else if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Drive && currentShiftRequest == VaLas_Controller::ShiftRequest::DownShift)
   {
-    Serial.println("Downshift detected");
+    Serial.println("Downshift detected, using ShiftControl V2");
     Serial.println("Current gear before downshift" + String(*gear));
     if ((*gear >= 2) && (*gear <= 6))
     {
