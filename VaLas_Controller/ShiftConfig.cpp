@@ -48,6 +48,7 @@ static void handleCalibrateClosed();
 static void handleCalibrateWideOpen();
 static void handleTpsAdc();
 static void handleN2N3Debug();
+static void handleAtfDebug();
 static void initDefaultSettings();
 
 extern Sensors sensors;
@@ -117,6 +118,7 @@ void ShiftConfig::execute(void * parameter)
     webServer.on("/calibrate/wide-open", HTTP_POST, handleCalibrateWideOpen);
     webServer.on("/tps-adc", HTTP_GET, handleTpsAdc);
     webServer.on("/n2n3-debug", HTTP_GET, handleN2N3Debug);
+    webServer.on("/atf-debug", HTTP_GET, handleAtfDebug);
     webServer.begin();
     webServerInitialized = true;
 
@@ -475,13 +477,18 @@ static void handleRoot()
   html += g_defaultUseThrottlePosition ? "checked" : "unchecked";
   html += ")<br><br>";
 
-  html += F("<details id='n2n3Debug'><summary>Debug: N2/N3 sensor test</summary>");
-  html += F("<p class='hint'>Works the same in V1 or V2 (not tied to the throttle position toggle above). Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>");
+  html += F("<details id='sensorDebug'><summary>Debug: N2/N3 + ATF sensor test</summary>");
+  html += F("<p class='hint'>Works the same in V1 or V2 (not tied to the throttle position toggle above).</p>");
+  html += F("<b>N2/N3 speed sensors</b>");
+  html += F("<p class='hint'>Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>");
   html += F("<div class='setting-row'><label>N2 / N3 pulses:</label><span id='n2n3Pulses'>-</span></div>");
   html += F("<div class='setting-row'><label>N2 / N3 RPM:</label><span id='n2n3Rpms'>-</span></div>");
   html += F("<div class='setting-row'><label>Calculated RPM:</label><span id='n2n3Calc'>-</span></div>");
   html += F("<div class='setting-row'><label>RPM trend:</label><span id='n2n3Trend'>-</span></div>");
   html += F("<p class='hint'>N2/N3 RPM should read ~equal in gears 2/3/4, and N2 near 0 in reverse (R1/R2). Trend should sit near 0 at steady cruise, go positive under acceleration, and swing negative on lift-off/braking.</p>");
+  html += F("<b>ATF temp sensor</b>");
+  html += F("<div class='setting-row'><label>ATF temp:</label><span id='atfTempValue'>-</span></div>");
+  html += F("<p class='hint'>The ATF sensor wire is shared with the P/N park-lock switch, so readings always report invalid while in P/N - that's expected. Check this in D or R only.</p>");
   html += F("</details><br>");
 
   for (int i = 0; i < 6; i++)
@@ -587,7 +594,7 @@ static void handleRoot()
   html += F("<input type='file' name='config' accept='.json,application/json' required>");
   html += F(" <input type='submit' value='Import JSON'>");
   html += F("</form>");
-  html += F("<script>var GEAR_RATIO_PRESETS={small:[3.9319,2.4079,1.4857,1.0000,0.8305],big:[3.5876,2.1862,1.4054,1.0000,0.8314]};\nfunction toggleThrottleSections(){var d=document.getElementById('useThrottlePosition').checked?'':'none';document.getElementById('tpsCalibration').style.display=d;document.getElementById('pressureTimeMap').style.display=d;document.getElementById('lockupSettings').style.display=d;}\nfunction applyGearRatioPreset(which){var ratios=GEAR_RATIO_PRESETS[which];for(var i=0;i<5;i++){document.getElementsByName('lockupRatio'+i)[0].value=ratios[i];}}\nfunction toggleGearRatioExpertMode(){document.getElementById('gearRatioFields').style.display=document.getElementById('gearRatioExpertMode').checked?'':'none';}\nfunction matchesPreset(ratios,current){for(var i=0;i<5;i++){if(Math.abs(ratios[i]-current[i])>0.001)return false;}return true;}\nfunction detectGearRatioPreset(){var current=[];for(var i=0;i<5;i++){current.push(parseFloat(document.getElementsByName('lockupRatio'+i)[0].value));}if(matchesPreset(GEAR_RATIO_PRESETS.small,current)){document.getElementById('gearRatioPresetSmall').checked=true;}else if(matchesPreset(GEAR_RATIO_PRESETS.big,current)){document.getElementById('gearRatioPresetBig').checked=true;}else{document.getElementById('gearRatioExpertMode').checked=true;toggleGearRatioExpertMode();}}\ndetectGearRatioPreset();\nsetInterval(function(){if(document.getElementById('tpsCalibration').style.display==='none')return;fetch('/tps-adc').then(function(r){return r.text();}).then(function(v){document.getElementById('currentAdcValue').textContent=v;}).catch(function(){});},500);\nfunction fetchN2N3Debug(){if(!document.getElementById('n2n3Debug').open)return;fetch('/n2n3-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];document.getElementById('n2n3Calc').textContent=p[4];document.getElementById('n2n3Trend').textContent=p[5];}).catch(function(){});}\ndocument.getElementById('n2n3Debug').addEventListener('toggle',fetchN2N3Debug);\nsetInterval(fetchN2N3Debug,500);\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
+  html += F("<script>var GEAR_RATIO_PRESETS={small:[3.9319,2.4079,1.4857,1.0000,0.8305],big:[3.5876,2.1862,1.4054,1.0000,0.8314]};\nfunction toggleThrottleSections(){var d=document.getElementById('useThrottlePosition').checked?'':'none';document.getElementById('tpsCalibration').style.display=d;document.getElementById('pressureTimeMap').style.display=d;document.getElementById('lockupSettings').style.display=d;}\nfunction applyGearRatioPreset(which){var ratios=GEAR_RATIO_PRESETS[which];for(var i=0;i<5;i++){document.getElementsByName('lockupRatio'+i)[0].value=ratios[i];}}\nfunction toggleGearRatioExpertMode(){document.getElementById('gearRatioFields').style.display=document.getElementById('gearRatioExpertMode').checked?'':'none';}\nfunction matchesPreset(ratios,current){for(var i=0;i<5;i++){if(Math.abs(ratios[i]-current[i])>0.001)return false;}return true;}\nfunction detectGearRatioPreset(){var current=[];for(var i=0;i<5;i++){current.push(parseFloat(document.getElementsByName('lockupRatio'+i)[0].value));}if(matchesPreset(GEAR_RATIO_PRESETS.small,current)){document.getElementById('gearRatioPresetSmall').checked=true;}else if(matchesPreset(GEAR_RATIO_PRESETS.big,current)){document.getElementById('gearRatioPresetBig').checked=true;}else{document.getElementById('gearRatioExpertMode').checked=true;toggleGearRatioExpertMode();}}\ndetectGearRatioPreset();\nsetInterval(function(){if(document.getElementById('tpsCalibration').style.display==='none')return;fetch('/tps-adc').then(function(r){return r.text();}).then(function(v){document.getElementById('currentAdcValue').textContent=v;}).catch(function(){});},500);\nfunction fetchSensorDebug(){if(!document.getElementById('sensorDebug').open)return;fetch('/n2n3-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];document.getElementById('n2n3Calc').textContent=p[4];document.getElementById('n2n3Trend').textContent=p[5];}).catch(function(){});fetch('/atf-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';}).catch(function(){});}\ndocument.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\nsetInterval(fetchSensorDebug,500);\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
 
   webServer.send(200, "text/html", html);
@@ -845,6 +852,12 @@ static void handleN2N3Debug()
   String csv = String(sensors.GetLastN2Pulses()) + "," + String(sensors.GetLastN3Pulses()) + "," +
     String(sensors.GetLastN2Rpm()) + "," + String(sensors.GetLastN3Rpm()) + "," +
     String(sensors.GetLastCalculatedRpm()) + "," + String(sensors.GetRpmTrendPerSec());
+  webServer.send(200, "text/plain", csv);
+}
+
+static void handleAtfDebug()
+{
+  String csv = String(sensors.GetLastAtfTempC()) + "," + String(sensors.IsLastAtfValid() ? 1 : 0);
   webServer.send(200, "text/plain", csv);
 }
 

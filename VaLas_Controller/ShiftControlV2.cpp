@@ -338,7 +338,7 @@ void ShiftControlV2::finishShift()
       ledcWrite(pwmChannelsPointerV2->mpcChannel, activeFinalMpc);
       ledcWrite(pwmChannelsPointerV2->spcChannel, 0);
       digitalWrite(y3Pin, LOW);
-      ledcWrite(pwmChannelsPointerV2->tccChannel, (255 * 95) / 100); //95% for torque converter lockup with some slip for comfort
+      ledcWrite(pwmChannelsPointerV2->tccChannel, (255 * 97) / 100); //97% for torque converter lockup with some slip for comfort
       break;
     case TransitionKind::FiveTccToFive:
       ledcWrite(pwmChannelsPointerV2->mpcChannel, activeFinalMpc);
@@ -357,7 +357,7 @@ void ShiftControlV2::finishShift()
   *screenToDisplayValueV2 = VaLas_Controller::DisplayScreen::Main;
 }
 
-// Trend-gated lockup for gears 3-5 while cruising; gear 5+ keeps its own fixed-95% lockup above.
+// Trend-gated lockup for gears 3-5 while cruising; gear 5+ keeps its own fixed-97% lockup above.
 // Reuses each gear's (otherwise idle, since Normal shifts now always release TCC) UpshiftTorqueConverterLockup
 // value as the steady-state lockup target duty.
 void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)

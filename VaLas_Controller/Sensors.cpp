@@ -258,6 +258,7 @@ bool Sensors::read_atf_temp(int* dest){
     for (uint8_t i = 0; i < NUM_ATF_SAMPLES; i++) {
         raw = analogRead(PIN_ATF); // Read the actual ADC value
         if (raw >= 1000) {
+            lastAtfValid = false;
             return false; // Parking lock engaged, cannot read.
         }
         avg += raw;
@@ -270,9 +271,13 @@ bool Sensors::read_atf_temp(int* dest){
     //ESP_LOGI("ATF", "AVG VOLTAGE %d mV", voltage_mv);
     if (voltage_mv < atf_temp_lookup[0].v) {
         *dest = atf_temp_lookup[0].temp / 10;
+        lastAtfTempC = *dest;
+        lastAtfValid = true;
         return true;
     } else if (voltage_mv > atf_temp_lookup[NUM_TEMP_POINTS-1].v) {
         *dest = (atf_temp_lookup[NUM_TEMP_POINTS-1].temp) / 10;
+        lastAtfTempC = *dest;
+        lastAtfValid = true;
         return true;
     } else {
         for (uint8_t i = 0; i < NUM_TEMP_POINTS-1; i++) {
@@ -281,11 +286,22 @@ bool Sensors::read_atf_temp(int* dest){
                 float dx = voltage_mv - atf_temp_lookup[i].v;
                 float dy = atf_temp_lookup[i+1].v - atf_temp_lookup[i].v;
                 *dest = (atf_temp_lookup[i].temp + (atf_temp_lookup[i+1].temp-atf_temp_lookup[i].temp) * ((dx)/dy)) / 10;
+                lastAtfTempC = *dest;
+                lastAtfValid = true;
                 return true;
             }
         }
+        lastAtfValid = true; // Fell through the loop (shouldn't happen given the bounds checks above) but no bad reading either
         return true;
     }
+}
+
+int Sensors::GetLastAtfTempC() {
+    return lastAtfTempC;
+}
+
+bool Sensors::IsLastAtfValid() {
+    return lastAtfValid;
 }
 
 bool Sensors::read_throttle_position(int* dest, const VaLas_Controller::ThrottleCalibration& settings) {

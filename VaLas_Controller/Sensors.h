@@ -22,6 +22,8 @@ class Sensors {
         int GetLastN3Rpm(); // n3Rpm from the last read_input_rpm() call
         int GetLastCalculatedRpm(); // calcRpm from the last read_input_rpm() call (-1 if never read)
         bool read_atf_temp(int* dest);
+        int GetLastAtfTempC(); // ATF temp (*C) from the last successful read_atf_temp() call
+        bool IsLastAtfValid(); // false while the reading last failed (e.g. P/N park-lock quirk)
         bool read_throttle_position(int* dest, const VaLas_Controller::ThrottleCalibration& settings); // Reads and calibrates optional throttle position
         bool read_engine_rpm(int* engineRpm); // Raw engine RPM reading
 		
@@ -37,6 +39,8 @@ class Sensors {
         int lastN3Pulses = 0;
         int lastN2Rpm = 0;
         int lastN3Rpm = 0;
+        int lastAtfTempC = 0;
+        bool lastAtfValid = false;
         void setupEngineRpmPCNT();
         int calculateEngineRpm(uint32_t pulseCount, uint32_t timeMs);
         int calculateGaugeOutput(int engineRpm);

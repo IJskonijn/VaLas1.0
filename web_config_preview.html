@@ -43,14 +43,19 @@
     <label><input type="checkbox" id="useThrottlePosition" onchange="toggleThrottleSections()"> Use throttle position sensor</label>
     <span class="hint">(default: unchecked)</span>
 
-    <details id="n2n3Debug">
-      <summary>Debug: N2/N3 sensor test</summary>
-      <p class="hint">Works the same in V1 or V2 (not tied to the throttle position toggle above). Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>
+    <details id="sensorDebug">
+      <summary>Debug: N2/N3 + ATF sensor test</summary>
+      <p class="hint">Works the same in V1 or V2 (not tied to the throttle position toggle above).</p>
+      <b>N2/N3 speed sensors</b>
+      <p class="hint">Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>
       <label>N2 / N3 pulses: <span>- / -</span></label><br>
       <label>N2 / N3 RPM: <span>- / -</span></label><br>
       <label>Calculated RPM: <span>-</span></label><br>
       <label>RPM trend: <span>-</span></label>
       <p class="hint">N2/N3 RPM should read ~equal in gears 2/3/4, and N2 near 0 in reverse (R1/R2). Trend should sit near 0 at steady cruise, go positive under acceleration, and swing negative on lift-off/braking. Live on the device (polls /n2n3-debug every 500ms while expanded); static placeholder in this preview.</p>
+      <b>ATF temp sensor</b>
+      <label>ATF temp: <span>-</span></label>
+      <p class="hint">The ATF sensor wire is shared with the P/N park-lock switch, so readings always report invalid while in P/N - that's expected. Check this in D or R only. Live on the device (polls /atf-debug every 500ms while expanded); static placeholder in this preview.</p>
     </details>
 
     <h3>D1</h3>
