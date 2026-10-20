@@ -198,6 +198,10 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
     digitalWrite(y4Pin, LOW);
     ledcWrite(pwmChannelsPointer->spcChannel, 0); // Set to 0 in D and R
   }
+
+  // V1 has no lockup release state machine - always clear TCC on any lever reposition so a
+  // converter lockup latched during a prior shift can never persist into P/N/R/D.
+  ledcWrite(pwmChannelsPointer->tccChannel, 0);
   
   // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
@@ -227,7 +231,10 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
   ledcWrite(pwmChannelsPointer->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointer->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
-  ledcWrite(pwmChannelsPointer->tccChannel, gearboxSettings[gear].DownshiftTorqueConverterLockup);
+  // DownshiftTorqueConverterLockup/UpshiftTorqueConverterLockup are now shared with ShiftControlV2's
+  // gated steady-state lockup target and V1 has no release logic, so V1 never engages TCC here -
+  // only the explicit 5<->5OD transitions below manage the converter lockup in V1.
+  ledcWrite(pwmChannelsPointer->tccChannel, 0);
 
   if (gear == 2)
   {
@@ -272,7 +279,10 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
   ledcWrite(pwmChannelsPointer->mpcChannel, linePressure);
   ledcWrite(pwmChannelsPointer->spcChannel, shiftPressure);
   digitalWrite(gearPin, HIGH);
-  ledcWrite(pwmChannelsPointer->tccChannel, gearboxSettings[gear - 2].UpshiftTorqueConverterLockup);
+  // UpshiftTorqueConverterLockup is now shared with ShiftControlV2's gated steady-state lockup
+  // target (defaults are nonzero for gears 3/4) and V1 has no release logic, so V1 never engages
+  // TCC here - only the explicit 5<->5OD transitions below manage the converter lockup in V1.
+  ledcWrite(pwmChannelsPointer->tccChannel, 0);
 
   vTaskDelay(shiftDelay);
 
@@ -308,5 +318,5 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
   ledcWrite(pwmChannelsPointer->mpcChannel, constrain(25, 0, 255));
   ledcWrite(pwmChannelsPointer->spcChannel, 0);
   digitalWrite(y3Pin, LOW);
-  ledcWrite(pwmChannelsPointer->tccChannel, (255 * 95) / 100); //95% for torque converter lockup with some slip for comfort
+  ledcWrite(pwmChannelsPointer->tccChannel, (255 * 97) / 100); //97% for torque converter lockup with some slip for comfort
 }
