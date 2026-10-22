@@ -253,17 +253,26 @@ int Sensors::GetLastCalculatedRpm() {
 // Returns ATF temp in *C
 bool Sensors::read_atf_temp(int* dest){
     #define NUM_ATF_SAMPLES 5
-    uint32_t raw = 0;
     uint32_t avg = 0;
     for (uint8_t i = 0; i < NUM_ATF_SAMPLES; i++) {
-        raw = analogRead(PIN_ATF); // Read the actual ADC value
-        if (raw >= 1000) {
-            lastAtfValid = false;
-            return false; // Parking lock engaged, cannot read.
-        }
-        avg += raw;
+        avg += analogRead(PIN_ATF); // Read the actual ADC value
     }
     avg /= NUM_ATF_SAMPLES;
+    lastAtfRawAdc = avg; // Record even on failure so the raw value is visible for wiring diagnosis
+
+    // Throttled diagnostic print - confirms whether the pin is actually reading a sane voltage.
+    static uint32_t lastAtfDebugMs = 0;
+    if (millis() - lastAtfDebugMs >= 500) {
+        lastAtfDebugMs = millis();
+        Serial.printf("[ATF] rawAdc=%u\n", avg);
+    }
+
+    // Checked against the averaged value (not each individual sample) so a single noisy ADC
+    // reading can't falsely trigger the P/N park-lock rejection below.
+    if (avg >= 1000) {
+        lastAtfValid = false;
+        return false; // Parking lock engaged, cannot read.
+    }
     
     // Convert ADC reading to millivolts (assuming 3.3V reference and 12-bit ADC)
     uint32_t voltage_mv = (avg * 3300) / 4095;
@@ -302,6 +311,10 @@ int Sensors::GetLastAtfTempC() {
 
 bool Sensors::IsLastAtfValid() {
     return lastAtfValid;
+}
+
+int Sensors::GetLastAtfRawAdc() {
+    return lastAtfRawAdc;
 }
 
 bool Sensors::read_throttle_position(int* dest, const VaLas_Controller::ThrottleCalibration& settings) {
