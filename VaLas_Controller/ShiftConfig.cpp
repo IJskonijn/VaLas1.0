@@ -50,6 +50,7 @@ static void handleTpsAdc();
 static void handleN2N3Debug();
 static void handleAtfDebug();
 static void initDefaultSettings();
+static void sendAndClose(int code, const char* contentType, const String& content);
 
 extern Sensors sensors;
 
@@ -414,23 +415,24 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
 
 // ----- HTTP handlers -----
 
-// Ideas: Show default values behind textbox
-//        Reset button with confirmation dialog
-//        Auto refresh after save / reset (Now it shows 404)
-//        Textbox width can be 1/4 or 1/5 length
-//        Log all (web) actions to console, like save and reset
-//        Setting for display size like UseCanBus
-
-// Fix auto refresh
-// Fix default setting (enable CAN + paddle, disable 0.96 OLED)
-
 extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
+
+// ESP32WebServer only serves one TCP client at a time and otherwise waits up to
+// HTTP_MAX_CLOSE_WAIT (2s) for the browser to close its end before accepting the next
+// connection. Mobile browsers are often slow to close keep-alive sockets, which was
+// starving the 500ms debug/status polling (mobile clients mostly saw stuck/zero readings).
+// Force-closing from the server side right after sending fixes this.
+static void sendAndClose(int code, const char* contentType, const String& content)
+{
+  webServer.send(code, contentType, content);
+  webServer.client().stop();
+}
 
 static void handleRoot()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr)
   {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
@@ -597,7 +599,7 @@ static void handleRoot()
   html += F("<script>var GEAR_RATIO_PRESETS={small:[3.9319,2.4079,1.4857,1.0000,0.8305],big:[3.5876,2.1862,1.4054,1.0000,0.8314]};\nfunction toggleThrottleSections(){var d=document.getElementById('useThrottlePosition').checked?'':'none';document.getElementById('tpsCalibration').style.display=d;document.getElementById('pressureTimeMap').style.display=d;document.getElementById('lockupSettings').style.display=d;}\nfunction applyGearRatioPreset(which){var ratios=GEAR_RATIO_PRESETS[which];for(var i=0;i<5;i++){document.getElementsByName('lockupRatio'+i)[0].value=ratios[i];}}\nfunction toggleGearRatioExpertMode(){document.getElementById('gearRatioFields').style.display=document.getElementById('gearRatioExpertMode').checked?'':'none';}\nfunction matchesPreset(ratios,current){for(var i=0;i<5;i++){if(Math.abs(ratios[i]-current[i])>0.001)return false;}return true;}\nfunction detectGearRatioPreset(){var current=[];for(var i=0;i<5;i++){current.push(parseFloat(document.getElementsByName('lockupRatio'+i)[0].value));}if(matchesPreset(GEAR_RATIO_PRESETS.small,current)){document.getElementById('gearRatioPresetSmall').checked=true;}else if(matchesPreset(GEAR_RATIO_PRESETS.big,current)){document.getElementById('gearRatioPresetBig').checked=true;}else{document.getElementById('gearRatioExpertMode').checked=true;toggleGearRatioExpertMode();}}\ndetectGearRatioPreset();\nsetInterval(function(){if(document.getElementById('tpsCalibration').style.display==='none')return;fetch('/tps-adc').then(function(r){return r.text();}).then(function(v){document.getElementById('currentAdcValue').textContent=v;}).catch(function(){});},500);\nfunction fetchSensorDebug(){if(!document.getElementById('sensorDebug').open)return;fetch('/n2n3-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];document.getElementById('n2n3Calc').textContent=p[4];document.getElementById('n2n3Trend').textContent=p[5];}).catch(function(){});fetch('/atf-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';}).catch(function(){});}\ndocument.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\nsetInterval(fetchSensorDebug,500);\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
   html += F("</body></html>");
 
-  webServer.send(200, "text/html", html);
+  sendAndClose(200, "text/html", html);
 }
 
 // Handle reset: restore defaults, save, and redirect
@@ -605,7 +607,7 @@ static void handleReset()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr)
   {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
   
@@ -640,14 +642,14 @@ static void handleReset()
 
   webServer.sendHeader("Connection", "close");
   webServer.sendHeader("Location", "/");
-  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
+  sendAndClose(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
 }
 
 static void handleSave()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr)
   {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
@@ -723,14 +725,14 @@ static void handleSave()
 
   webServer.sendHeader("Connection", "close");
   webServer.sendHeader("Location", "/");
-  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
+  sendAndClose(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
 }
 
 static void handleExport()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr)
   {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
@@ -740,7 +742,7 @@ static void handleExport()
   String json;
   serializeJsonPretty(doc, json);
   webServer.sendHeader("Content-Disposition", "attachment; filename=config.json");
-  webServer.send(200, "application/json", json);
+  sendAndClose(200, "application/json", json);
 }
 
 static void handleImportUpload()
@@ -769,7 +771,7 @@ static void handleImport()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr)
   {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
@@ -779,7 +781,7 @@ static void handleImport()
   File file = SPIFFS.open("/import.json", "r");
   if (!file)
   {
-    webServer.send(400, "text/plain", "Import failed: no JSON file received");
+    sendAndClose(400, "text/plain", "Import failed: no JSON file received");
     return;
   }
 
@@ -790,61 +792,61 @@ static void handleImport()
 
   if (error || !doc["GearShiftSettings"].is<JsonArray>() || doc["GearShiftSettings"].size() != 6)
   {
-    webServer.send(400, "text/plain", "Import failed: invalid config.json format");
+    sendAndClose(400, "text/plain", "Import failed: invalid config.json format");
     return;
   }
 
   ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, doc);
   if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr))
   {
-    webServer.send(500, "text/plain", "Import failed: could not save configuration");
+    sendAndClose(500, "text/plain", "Import failed: could not save configuration");
     return;
   }
 
   webServer.sendHeader("Connection", "close");
   webServer.sendHeader("Location", "/");
-  webServer.send(302, "text/html", "<!DOCTYPE html><html><body>Configuration imported. Please reboot manually.</body></html>");
+  sendAndClose(302, "text/html", "<!DOCTYPE html><html><body>Configuration imported. Please reboot manually.</body></html>");
 }
 
 static void handleCalibrateClosed()
 {
   if (!g_throttleSettingsPtr) {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
   int rawAdc = sensors.ReadThrottleAdc();
   if (rawAdc < 0) {
-    webServer.send(400, "text/plain", "TPS pin is disabled or unavailable");
+    sendAndClose(400, "text/plain", "TPS pin is disabled or unavailable");
     return;
   }
 
   g_throttleSettingsPtr->closedAdc = rawAdc;
   shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr);
-  webServer.send(200, "text/plain", "Closed throttle calibration saved");
+  sendAndClose(200, "text/plain", "Closed throttle calibration saved");
 }
 
 static void handleCalibrateWideOpen()
 {
   if (!g_throttleSettingsPtr) {
-    webServer.send(500, "text/plain", "Configuration not initialised yet");
+    sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
   }
 
   int rawAdc = sensors.ReadThrottleAdc();
   if (rawAdc < 0) {
-    webServer.send(400, "text/plain", "TPS pin is disabled or unavailable");
+    sendAndClose(400, "text/plain", "TPS pin is disabled or unavailable");
     return;
   }
 
   g_throttleSettingsPtr->wideOpenAdc = rawAdc;
   shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr);
-  webServer.send(200, "text/plain", "Wide-open throttle calibration saved");
+  sendAndClose(200, "text/plain", "Wide-open throttle calibration saved");
 }
 
 static void handleTpsAdc()
 {
-  webServer.send(200, "text/plain", String(sensors.ReadThrottleAdc()));
+  sendAndClose(200, "text/plain", String(sensors.ReadThrottleAdc()));
 }
 
 static void handleN2N3Debug()
@@ -852,13 +854,13 @@ static void handleN2N3Debug()
   String csv = String(sensors.GetLastN2Pulses()) + "," + String(sensors.GetLastN3Pulses()) + "," +
     String(sensors.GetLastN2Rpm()) + "," + String(sensors.GetLastN3Rpm()) + "," +
     String(sensors.GetLastCalculatedRpm()) + "," + String(sensors.GetRpmTrendPerSec());
-  webServer.send(200, "text/plain", csv);
+  sendAndClose(200, "text/plain", csv);
 }
 
 static void handleAtfDebug()
 {
   String csv = String(sensors.GetLastAtfTempC()) + "," + String(sensors.IsLastAtfValid() ? 1 : 0);
-  webServer.send(200, "text/plain", csv);
+  sendAndClose(200, "text/plain", csv);
 }
 
 // Helper to initialize the static default settings
