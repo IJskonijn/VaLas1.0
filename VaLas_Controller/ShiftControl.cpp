@@ -204,7 +204,9 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   ledcWrite(pwmChannelsPointer->tccChannel, 0);
   
   // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
-  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
+  // New thought/observation: Seems like D1 > R = R1, D2 > R = R2, D3+ > R = R2???
+  // This means that when shifting from drive to reverse, gear = 2 if coming from D2 or higher
+  if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse && *gear >= 2))
     *gear = 2;
 }
 
