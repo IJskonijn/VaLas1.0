@@ -1,6 +1,8 @@
 #ifndef VALAS_CONTROLLER_H
 #define VALAS_CONTROLLER_H
 
+#include <Arduino.h>
+
 // GEAR SETTINGS
 // PIN  1-2,4-5 SWITCH  ON/OFF
 // PIN2 2-3     SWITCH  ON/OFF
@@ -159,5 +161,12 @@ class VaLas_Controller {
 		
 	private:
 };
+
+// Writes a PWM duty cycle, optionally inverted (255-value) for driver stages that flip the sense.
+// Centralizing this means every ledcWrite() call site for an invertible channel stays a one-liner.
+inline void ledcWritePwm(uint8_t channel, int value, bool invert)
+{
+  ledcWrite(channel, invert ? (255 - constrain(value, 0, 255)) : value);
+}
 
 #endif

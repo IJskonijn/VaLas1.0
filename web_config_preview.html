@@ -42,6 +42,15 @@
     <br>
     <label><input type="checkbox" id="useThrottlePosition" onchange="toggleThrottleSections()"> Use throttle position sensor</label>
     <span class="hint">(default: unchecked)</span>
+    <br><br>
+
+    <fieldset>
+      <legend>PWM output inversion (PCB hardware revision):</legend>
+      <p class="hint">Enable for the current 2-channel lowside-MOSFET driver PCB, whose pre-driver stage flips the duty-cycle sense on the MPC/SPC/TCC channels together. Uncheck only if you revert to the older, non-inverting PCB.</p>
+      <label><input type="checkbox" checked> Invert MPC/SPC/TCC PWM outputs</label>
+      <span class="hint">(default: checked)</span>
+    </fieldset>
+    <br>
 
     <details id="sensorDebug">
       <summary>Debug: N2/N3 + ATF sensor test</summary>

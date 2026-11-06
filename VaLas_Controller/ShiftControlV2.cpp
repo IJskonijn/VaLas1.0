@@ -18,9 +18,11 @@ VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPointerV2;
 int* calculatedRpmPointerV2;
 int* rpmTrendPointerV2;
 VaLas_Controller::LockupControlSettings* lockupSettingsPointerV2;
+bool* invertPwmOutputsV2;
 
 void ShiftControlV2::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr,
-  VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr)
+  VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr,
+  bool* invertPwmOutputsPtr)
 {
   Serial.println("Init ShiftControlV2");
   displayHandlerPointerV2 = displayHandlerPtr;
@@ -28,6 +30,7 @@ void ShiftControlV2::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::P
   gearleverV2 = gearLeverPtr;
   screenToDisplayValueV2 = screenToDisplayPtr;
   gearboxSettingsV2 = gearboxSettingsPtr;
+  invertPwmOutputsV2 = invertPwmOutputsPtr;
   throttlePositionPointerV2 = nullptr;
   pressureTimeMapPointerV2 = nullptr;
 }
@@ -178,14 +181,14 @@ void ShiftControlV2::resetToGear2(VaLas_Controller::GearLeverPosition currentLev
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
   {
-    ledcWrite(pwmChannelsPointerV2->mpcChannel, (255 * 40) / 100); //40%
-    ledcWrite(pwmChannelsPointerV2->spcChannel, (255 * 33) / 100); //33%
+    ledcWritePwm(pwmChannelsPointerV2->mpcChannel, (255 * 40) / 100, *invertPwmOutputsV2); //40%
+    ledcWritePwm(pwmChannelsPointerV2->spcChannel, (255 * 33) / 100, *invertPwmOutputsV2); //33%
     digitalWrite(y4Pin, LOW); // Back to idle
   }
   else
   {
     digitalWrite(y4Pin, LOW);
-    ledcWrite(pwmChannelsPointerV2->spcChannel, 0); // Set to 0 in D and R
+    ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2); // Set to 0 in D and R
   }
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
@@ -213,11 +216,11 @@ void ShiftControlV2::startDownShift(int customMpcAfterShift, VaLas_Controller::G
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear].DownshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear].DownshiftDelay, throttlePosition, atfTempC);
 
-  ledcWrite(pwmChannelsPointerV2->mpcChannel, linePressure);
-  ledcWrite(pwmChannelsPointerV2->spcChannel, shiftPressure);
+  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertPwmOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertPwmOutputsV2);
   digitalWrite(gearPin, HIGH);
   // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
-  ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
   lockupEngaged = false;
   lockupPendingSinceMs = 0;
 
@@ -252,11 +255,11 @@ void ShiftControlV2::startUpShift(int customMpcAfterShift, VaLas_Controller::Gea
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear - 2].UpshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear - 2].UpshiftDelay, throttlePosition, atfTempC);
 
-  ledcWrite(pwmChannelsPointerV2->mpcChannel, linePressure);
-  ledcWrite(pwmChannelsPointerV2->spcChannel, shiftPressure);
+  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertPwmOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertPwmOutputsV2);
   digitalWrite(gearPin, HIGH);
   // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
-  ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
   lockupEngaged = false;
   lockupPendingSinceMs = 0;
 
@@ -309,8 +312,8 @@ void ShiftControlV2::tick()
 
     if (activeKind == TransitionKind::ThreeToTwoDownshift)
     {
-      ledcWrite(pwmChannelsPointerV2->mpcChannel, activeReducedLinePressure);
-      ledcWrite(pwmChannelsPointerV2->spcChannel, activeReducedShiftPressure);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeReducedLinePressure, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, activeReducedShiftPressure, *invertPwmOutputsV2);
       digitalWrite(activeGearPin, LOW);
       phase = Phase::Reducing;
       phaseStartMs = millis();
@@ -335,20 +338,20 @@ void ShiftControlV2::finishShift()
   switch (activeKind)
   {
     case TransitionKind::FiveToFiveTcc:
-      ledcWrite(pwmChannelsPointerV2->mpcChannel, activeFinalMpc);
-      ledcWrite(pwmChannelsPointerV2->spcChannel, 0);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
       digitalWrite(y3Pin, LOW);
-      ledcWrite(pwmChannelsPointerV2->tccChannel, (255 * 97) / 100); //97% for torque converter lockup with some slip for comfort
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, (255 * 97) / 100, *invertPwmOutputsV2); //97% for torque converter lockup with some slip for comfort
       break;
     case TransitionKind::FiveTccToFive:
-      ledcWrite(pwmChannelsPointerV2->mpcChannel, activeFinalMpc);
-      ledcWrite(pwmChannelsPointerV2->spcChannel, 0);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
       digitalWrite(y3Pin, LOW);
-      ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
       break;
     default: // Normal and ThreeToTwoDownshift both finish the same way; the solenoid is already LOW for ThreeToTwoDownshift
-      ledcWrite(pwmChannelsPointerV2->mpcChannel, activeFinalMpc);
-      ledcWrite(pwmChannelsPointerV2->spcChannel, 0);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
       digitalWrite(activeGearPin, LOW);
       break;
   }
@@ -379,7 +382,7 @@ void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLev
     lockupPendingSinceMs = 0;
     if (lockupEngaged)
     {
-      ledcWrite(pwmChannelsPointerV2->tccChannel, 0);
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
       lockupEngaged = false;
     }
     return;
@@ -397,7 +400,7 @@ void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLev
   if (millis() - lockupPendingSinceMs < (unsigned long)lockupSettingsPointerV2->engageDelayMs)
     return;
 
-  ledcWrite(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 1].UpshiftTorqueConverterLockup);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 1].UpshiftTorqueConverterLockup, *invertPwmOutputsV2);
   lockupEngaged = true;
 }
 

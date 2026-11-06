@@ -8,7 +8,8 @@ class ShiftControl {
     
 	public:
 		void init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr, 
-			VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr);
+			VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr,
+			bool* invertPwmOutputsPtr);
 		void execute(void * parameter);
 		
 	private:

@@ -43,6 +43,7 @@ class TaskStructs {
             VaLas_Controller::ThrottleCalibration* throttleSettingsPtr;
             VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr;
             VaLas_Controller::LockupControlSettings* lockupSettingsPtr;
+            bool* invertPwmOutputsPtr;
         };
         typedef struct shiftConfigParameters ShiftConfigParameters;
 

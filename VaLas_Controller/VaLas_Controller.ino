@@ -47,6 +47,8 @@ VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSett
 VaLas_Controller::ThrottleCalibration initial_ThrottleCalibration;
 VaLas_Controller::PressureTimeMapSettings initial_PressureTimeMapSettings;
 VaLas_Controller::LockupControlSettings initial_LockupControlSettings;
+// Current 2-channel lowside-MOSFET driver PCB inverts mpc/spc/tcc PWM; set false to revert to the older, non-inverting PCB.
+bool initial_InvertPwmOutputs = true;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
 
@@ -98,7 +100,8 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   initial_GearboxSettingsPtr,
   &initial_ThrottleCalibration,
   &initial_PressureTimeMapSettings,
-  &initial_LockupControlSettings
+  &initial_LockupControlSettings,
+  &initial_InvertPwmOutputs
 };
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
@@ -203,7 +206,7 @@ void setup()
   digitalWrite(spcPin, LOW);
   digitalWrite(tccPin, LOW);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings, &initial_LockupControlSettings);
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings, &initial_LockupControlSettings, &initial_InvertPwmOutputs);
 
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
@@ -213,8 +216,8 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr);
-  shiftControlV2.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr);
+  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertPwmOutputs);
+  shiftControlV2.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertPwmOutputs);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(
