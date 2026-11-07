@@ -648,6 +648,8 @@ static void handleReset()
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
   Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
   Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
+  Serial.print("[WEB] useThrottlePosition: "); Serial.println(*g_useThrottlePositionPtr);
+  Serial.print("[WEB] useInvertDriverOutputs: "); Serial.println(*g_invertDriverOutputsPtr);
   for (int i = 0; i < 6; i++) {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
     Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
@@ -732,6 +734,8 @@ static void handleSave()
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
   Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
   Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
+  Serial.print("[WEB] useThrottlePosition: "); Serial.println(*g_useThrottlePositionPtr);
+  Serial.print("[WEB] useInvertDriverOutputs: "); Serial.println(*g_invertDriverOutputsPtr);
   for (int i = 0; i < 6; i++) {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
     Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
