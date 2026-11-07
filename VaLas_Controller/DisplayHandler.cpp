@@ -37,6 +37,9 @@ void DisplayHandler::begin()
 
   // Use the same pins as the ESP32 default, but initialize them explicitly so
   // the display remains independent of board-core defaults.
+  // end() first: re-running begin() on an already-installed I2C driver (as happens on the periodic
+  // OLED reinit in VaLas_Controller.ino) can corrupt driver state over repeated cycles.
+  Wire.end();
   Wire.begin(21, 22);
   Wire.setTimeOut(100);
   
