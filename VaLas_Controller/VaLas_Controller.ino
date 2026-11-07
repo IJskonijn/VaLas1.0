@@ -47,8 +47,9 @@ VaLas_Controller::ShiftSetting* initial_GearboxSettingsPtr = initial_GearboxSett
 VaLas_Controller::ThrottleCalibration initial_ThrottleCalibration;
 VaLas_Controller::PressureTimeMapSettings initial_PressureTimeMapSettings;
 VaLas_Controller::LockupControlSettings initial_LockupControlSettings;
-// Current 2-channel lowside-MOSFET driver PCB inverts mpc/spc/tcc PWM; set false to revert to the older, non-inverting PCB.
-bool initial_InvertPwmOutputs = true;
+// Current PCB's IXDI602PI inverting gate drivers flip mpc/spc/tcc PWM and y3/y4/y5 shift solenoids;
+// set false to revert to the older, non-inverting PCB.
+bool initial_InvertDriverOutputs = true;
 
 VaLas_Controller::DisplayScreen initial_screenToDisplay;
 
@@ -101,7 +102,7 @@ TaskStructs::ShiftConfigParameters shiftConfigParameters
   &initial_ThrottleCalibration,
   &initial_PressureTimeMapSettings,
   &initial_LockupControlSettings,
-  &initial_InvertPwmOutputs
+  &initial_InvertDriverOutputs
 };
 
 TaskStructs::DisplayHandlerParameters displayHandlerParameters
@@ -172,7 +173,12 @@ void setup()
   Serial.println(" - trend: ~0 at steady cruise, positive under acceleration, negative on lift-off/braking.");
 
   shiftConfig.init();
-  
+
+  // Load config before touching any output pins, so the invert-outputs setting (PCB revision)
+  // is already known for the safe-idle writes below instead of only taking effect once the
+  // shift-control tasks start.
+  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings, &initial_LockupControlSettings, &initial_InvertDriverOutputs);
+
   pinMode(upShiftPin, INPUT_PULLUP);
   pinMode(downShiftPin, INPUT_PULLUP);
 #if PIN_THROTTLE_POSITION >= 0
@@ -199,15 +205,15 @@ void setup()
   ledcAttachPin(spcPin, pwmChannels.spcChannel);
   ledcAttachPin(tccPin, pwmChannels.tccChannel);
   
-  digitalWrite(y3Pin, LOW);
-  digitalWrite(y4Pin, LOW);
-  digitalWrite(y5Pin, LOW);
-  digitalWrite(mpcPin, LOW);
-  digitalWrite(spcPin, LOW);
-  digitalWrite(tccPin, LOW);
+  digitalWriteInv(y3Pin, LOW, initial_InvertDriverOutputs);
+  digitalWriteInv(y4Pin, LOW, initial_InvertDriverOutputs);
+  digitalWriteInv(y5Pin, LOW, initial_InvertDriverOutputs);
+  // Plain digitalWrite() has no effect here - ledcAttachPin() above already routes these pins from
+  // the LEDC peripheral, so the actual duty must be set via ledcWrite (through the invert helper).
+  ledcWritePwm(pwmChannels.mpcChannel, 0, initial_InvertDriverOutputs);
+  ledcWritePwm(pwmChannels.spcChannel, 0, initial_InvertDriverOutputs);
+  ledcWritePwm(pwmChannels.tccChannel, 0, initial_InvertDriverOutputs);
   
-  shiftConfig.LoadDefaultConfig(initial_GearboxSettingsPtr, &initial_UseCanBus, &initial_UsePedalShifters, &initial_UseLargeDisplay, &initial_UseThrottlePosition, &initial_ThrottleCalibration, &initial_PressureTimeMapSettings, &initial_LockupControlSettings, &initial_InvertPwmOutputs);
-
   displayHandler.begin();
   displayHandler.DisplayStartupOnScreen();
 
@@ -216,8 +222,8 @@ void setup()
   else
     gearLeverInterface = new Gearlever_Modded();
 
-  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertPwmOutputs);
-  shiftControlV2.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertPwmOutputs);
+  shiftControl.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertDriverOutputs);
+  shiftControlV2.init(&displayHandler, &pwmChannels, gearLeverInterface, &initial_screenToDisplay, initial_GearboxSettingsPtr, &initial_InvertDriverOutputs);
 
   // Core 0 for critical
   xTaskCreatePinnedToCore(

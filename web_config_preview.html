@@ -45,9 +45,9 @@
     <br><br>
 
     <fieldset>
-      <legend>PWM output inversion (PCB hardware revision):</legend>
-      <p class="hint">Enable for the current 2-channel lowside-MOSFET driver PCB, whose pre-driver stage flips the duty-cycle sense on the MPC/SPC/TCC channels together. Uncheck only if you revert to the older, non-inverting PCB.</p>
-      <label><input type="checkbox" checked> Invert MPC/SPC/TCC PWM outputs</label>
+      <legend>Output inversion (PCB hardware revision):</legend>
+      <p class="hint">Enable for the current PCB, whose IXDI602PI inverting gate drivers flip the logic sense of the MPC/SPC/TCC PWM channels and the y3/y4/y5 shift solenoid outputs together. Uncheck only if you revert to the older, non-inverting PCB.</p>
+      <label><input type="checkbox" checked> Invert MPC/SPC/TCC + shift solenoid outputs</label>
       <span class="hint">(default: checked)</span>
     </fieldset>
     <br>

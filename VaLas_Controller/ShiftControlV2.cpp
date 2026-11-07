@@ -18,11 +18,11 @@ VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPointerV2;
 int* calculatedRpmPointerV2;
 int* rpmTrendPointerV2;
 VaLas_Controller::LockupControlSettings* lockupSettingsPointerV2;
-bool* invertPwmOutputsV2;
+bool* invertDriverOutputsV2;
 
 void ShiftControlV2::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr,
   VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr,
-  bool* invertPwmOutputsPtr)
+  bool* invertDriverOutputsPtr)
 {
   Serial.println("Init ShiftControlV2");
   displayHandlerPointerV2 = displayHandlerPtr;
@@ -30,7 +30,7 @@ void ShiftControlV2::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::P
   gearleverV2 = gearLeverPtr;
   screenToDisplayValueV2 = screenToDisplayPtr;
   gearboxSettingsV2 = gearboxSettingsPtr;
-  invertPwmOutputsV2 = invertPwmOutputsPtr;
+  invertDriverOutputsV2 = invertDriverOutputsPtr;
   throttlePositionPointerV2 = nullptr;
   pressureTimeMapPointerV2 = nullptr;
 }
@@ -181,14 +181,14 @@ void ShiftControlV2::resetToGear2(VaLas_Controller::GearLeverPosition currentLev
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
   {
-    ledcWritePwm(pwmChannelsPointerV2->mpcChannel, (255 * 40) / 100, *invertPwmOutputsV2); //40%
-    ledcWritePwm(pwmChannelsPointerV2->spcChannel, (255 * 33) / 100, *invertPwmOutputsV2); //33%
-    digitalWrite(y4Pin, LOW); // Back to idle
+    ledcWritePwm(pwmChannelsPointerV2->mpcChannel, (255 * 40) / 100, *invertDriverOutputsV2); //40%
+    ledcWritePwm(pwmChannelsPointerV2->spcChannel, (255 * 33) / 100, *invertDriverOutputsV2); //33%
+    digitalWriteInv(y4Pin, LOW, *invertDriverOutputsV2); // Back to idle
   }
   else
   {
-    digitalWrite(y4Pin, LOW);
-    ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2); // Set to 0 in D and R
+    digitalWriteInv(y4Pin, LOW, *invertDriverOutputsV2);
+    ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertDriverOutputsV2); // Set to 0 in D and R
   }
 
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Reverse || currentLeverPosition == VaLas_Controller::GearLeverPosition::Park)
@@ -216,11 +216,11 @@ void ShiftControlV2::startDownShift(int customMpcAfterShift, VaLas_Controller::G
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear].DownshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear].DownshiftDelay, throttlePosition, atfTempC);
 
-  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertPwmOutputsV2);
-  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertPwmOutputsV2);
-  digitalWrite(gearPin, HIGH);
+  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertDriverOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertDriverOutputsV2);
+  digitalWriteInv(gearPin, HIGH, *invertDriverOutputsV2);
   // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
-  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertDriverOutputsV2);
   lockupEngaged = false;
   lockupPendingSinceMs = 0;
 
@@ -255,11 +255,11 @@ void ShiftControlV2::startUpShift(int customMpcAfterShift, VaLas_Controller::Gea
   int shiftPressure = scalePressure2D(gearboxSettingsV2[gear - 2].UpshiftShiftPressure, throttlePosition, atfTempC);
   unsigned long shiftDelay = scaleDelay2D(gearboxSettingsV2[gear - 2].UpshiftDelay, throttlePosition, atfTempC);
 
-  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertPwmOutputsV2);
-  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertPwmOutputsV2);
-  digitalWrite(gearPin, HIGH);
+  ledcWritePwm(pwmChannelsPointerV2->mpcChannel, linePressure, *invertDriverOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->spcChannel, shiftPressure, *invertDriverOutputsV2);
+  digitalWriteInv(gearPin, HIGH, *invertDriverOutputsV2);
   // Always release lockup during a shift (re-engaged by updateLockup() once the new gear settles)
-  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertDriverOutputsV2);
   lockupEngaged = false;
   lockupPendingSinceMs = 0;
 
@@ -312,9 +312,9 @@ void ShiftControlV2::tick()
 
     if (activeKind == TransitionKind::ThreeToTwoDownshift)
     {
-      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeReducedLinePressure, *invertPwmOutputsV2);
-      ledcWritePwm(pwmChannelsPointerV2->spcChannel, activeReducedShiftPressure, *invertPwmOutputsV2);
-      digitalWrite(activeGearPin, LOW);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeReducedLinePressure, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, activeReducedShiftPressure, *invertDriverOutputsV2);
+      digitalWriteInv(activeGearPin, LOW, *invertDriverOutputsV2);
       phase = Phase::Reducing;
       phaseStartMs = millis();
       return;
@@ -338,21 +338,21 @@ void ShiftControlV2::finishShift()
   switch (activeKind)
   {
     case TransitionKind::FiveToFiveTcc:
-      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
-      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
-      digitalWrite(y3Pin, LOW);
-      ledcWritePwm(pwmChannelsPointerV2->tccChannel, (255 * 97) / 100, *invertPwmOutputsV2); //97% for torque converter lockup with some slip for comfort
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertDriverOutputsV2);
+      digitalWriteInv(y3Pin, LOW, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, (255 * 97) / 100, *invertDriverOutputsV2); //97% for torque converter lockup with some slip for comfort
       break;
     case TransitionKind::FiveTccToFive:
-      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
-      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
-      digitalWrite(y3Pin, LOW);
-      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertDriverOutputsV2);
+      digitalWriteInv(y3Pin, LOW, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertDriverOutputsV2);
       break;
     default: // Normal and ThreeToTwoDownshift both finish the same way; the solenoid is already LOW for ThreeToTwoDownshift
-      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertPwmOutputsV2);
-      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertPwmOutputsV2);
-      digitalWrite(activeGearPin, LOW);
+      ledcWritePwm(pwmChannelsPointerV2->mpcChannel, activeFinalMpc, *invertDriverOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->spcChannel, 0, *invertDriverOutputsV2);
+      digitalWriteInv(activeGearPin, LOW, *invertDriverOutputsV2);
       break;
   }
 
@@ -382,7 +382,7 @@ void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLev
     lockupPendingSinceMs = 0;
     if (lockupEngaged)
     {
-      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertPwmOutputsV2);
+      ledcWritePwm(pwmChannelsPointerV2->tccChannel, 0, *invertDriverOutputsV2);
       lockupEngaged = false;
     }
     return;
@@ -400,7 +400,7 @@ void ShiftControlV2::updateLockup(VaLas_Controller::GearLeverPosition currentLev
   if (millis() - lockupPendingSinceMs < (unsigned long)lockupSettingsPointerV2->engageDelayMs)
     return;
 
-  ledcWritePwm(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 1].UpshiftTorqueConverterLockup, *invertPwmOutputsV2);
+  ledcWritePwm(pwmChannelsPointerV2->tccChannel, gearboxSettingsV2[gear - 1].UpshiftTorqueConverterLockup, *invertDriverOutputsV2);
   lockupEngaged = true;
 }
 

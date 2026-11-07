@@ -13,12 +13,12 @@ Gearlever* gearlever;
 
 VaLas_Controller::DisplayScreen* screenToDisplayValue;
 VaLas_Controller::ShiftSetting* gearboxSettings;
-bool* invertPwmOutputs;
+bool* invertDriverOutputs;
 
 
 void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr, 
   VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr,
-  bool* invertPwmOutputsPtr)
+  bool* invertDriverOutputsPtr)
 {
   Serial.println("Init ShiftControl");
   displayHandlerPointer = displayHandlerPtr;
@@ -26,7 +26,7 @@ void ShiftControl::init(DisplayHandler* displayHandlerPtr, VaLas_Controller::Pwm
   gearlever = gearLeverPtr;
   screenToDisplayValue = screenToDisplayPtr;
   gearboxSettings = gearboxSettingsPtr;
-  invertPwmOutputs = invertPwmOutputsPtr;
+  invertDriverOutputs = invertDriverOutputsPtr;
 }
 
 void ShiftControl::execute(void * parameter)
@@ -185,9 +185,9 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   //TODO: Do the actual reset to gear 2 or reset all pins/pwms?
   if (currentLeverPosition == VaLas_Controller::GearLeverPosition::Park || currentLeverPosition == VaLas_Controller::GearLeverPosition::Neutral)
   {
-    ledcWritePwm(pwmChannelsPointer->mpcChannel, (255 * 40) / 100, *invertPwmOutputs); //40%
-    ledcWritePwm(pwmChannelsPointer->spcChannel, (255 * 33) / 100, *invertPwmOutputs); //33%
-    digitalWrite(y4Pin, LOW); // Back to idle
+    ledcWritePwm(pwmChannelsPointer->mpcChannel, (255 * 40) / 100, *invertDriverOutputs); //40%
+    ledcWritePwm(pwmChannelsPointer->spcChannel, (255 * 33) / 100, *invertDriverOutputs); //33%
+    digitalWriteInv(y4Pin, LOW, *invertDriverOutputs); // Back to idle
 
     // 3-4 Shift solenoid is pulsed continuously while in Park and during selector lever movement (Garage Shifts).
     // New info, 3-4 solenoid is not actually pulsing in original EGS
@@ -198,13 +198,13 @@ void ShiftControl::resetToGear2(VaLas_Controller::GearLeverPosition currentLever
   }
   else
   {
-    digitalWrite(y4Pin, LOW);
-    ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertPwmOutputs); // Set to 0 in D and R
+    digitalWriteInv(y4Pin, LOW, *invertDriverOutputs);
+    ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertDriverOutputs); // Set to 0 in D and R
   }
 
   // V1 has no lockup release state machine - always clear TCC on any lever reposition so a
   // converter lockup latched during a prior shift can never persist into P/N/R/D.
-  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertPwmOutputs);
+  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertDriverOutputs);
   
   // Reset only if we go to Reverse or Park, so we can continue in the same gear if going from N back to drive?
   // New thought/observation: Seems like D1 > R = R1, D2 > R = R2, D3+ > R = R2???
@@ -233,21 +233,21 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
   int linePressure = constrain(gearboxSettings[gear].DownshiftLinePressure, 0, 255);
   int shiftPressure = constrain(gearboxSettings[gear].DownshiftShiftPressure, 0, 255);
   int shiftDelay = gearboxSettings[gear].DownshiftDelay;
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure, *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure, *invertPwmOutputs);
-  digitalWrite(gearPin, HIGH);
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure, *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure, *invertDriverOutputs);
+  digitalWriteInv(gearPin, HIGH, *invertDriverOutputs);
   // DownshiftTorqueConverterLockup/UpshiftTorqueConverterLockup are now shared with ShiftControlV2's
   // gated steady-state lockup target and V1 has no release logic, so V1 never engages TCC here -
   // only the explicit 5<->5OD transitions below manage the converter lockup in V1.
-  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertPwmOutputs);
+  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertDriverOutputs);
 
   if (gear == 2)
   {
     vTaskDelay(shiftDelay);
 
-    ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure / 2, *invertPwmOutputs);
-    ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure / 2, *invertPwmOutputs);
-    digitalWrite(gearPin, LOW);
+    ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure / 2, *invertDriverOutputs);
+    ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure / 2, *invertDriverOutputs);
+    digitalWriteInv(gearPin, LOW, *invertDriverOutputs);
 
     vTaskDelay(50); // delay(50);
   }
@@ -256,9 +256,9 @@ void ShiftControl::downShift(int customMpcAfterShift, VaLas_Controller::GearLeve
     vTaskDelay(shiftDelay);
   }
 
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255), *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertPwmOutputs);
-  digitalWrite(gearPin, LOW);
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255), *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertDriverOutputs);
+  digitalWriteInv(gearPin, LOW, *invertDriverOutputs);
 }
 
 //  * TCC is available in 2nd thru 5th gear, based on throttle position, fluid temp and vehicle speed
@@ -281,19 +281,19 @@ void ShiftControl::upShift(int customMpcAfterShift, VaLas_Controller::GearLeverP
   int linePressure = constrain(gearboxSettings[gear - 2].UpshiftLinePressure, 0, 255);
   int shiftPressure = constrain(gearboxSettings[gear - 2].UpshiftShiftPressure, 0, 255);
   int shiftDelay = gearboxSettings[gear - 2].UpshiftDelay;
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure, *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure, *invertPwmOutputs);
-  digitalWrite(gearPin, HIGH);
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, linePressure, *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, shiftPressure, *invertDriverOutputs);
+  digitalWriteInv(gearPin, HIGH, *invertDriverOutputs);
   // UpshiftTorqueConverterLockup is now shared with ShiftControlV2's gated steady-state lockup
   // target (defaults are nonzero for gears 3/4) and V1 has no release logic, so V1 never engages
   // TCC here - only the explicit 5<->5OD transitions below manage the converter lockup in V1.
-  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertPwmOutputs);
+  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertDriverOutputs);
 
   vTaskDelay(shiftDelay);
 
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255), *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertPwmOutputs);
-  digitalWrite(gearPin, LOW);
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(customMpcAfterShift, 0, 255), *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertDriverOutputs);
+  digitalWriteInv(gearPin, LOW, *invertDriverOutputs);
 }
 
 void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
@@ -305,10 +305,10 @@ void ShiftControl::select_fivetcc_to_five(VaLas_Controller::GearLeverPosition cu
 
   vTaskDelay(gearboxSettings[gear].DownshiftDelay);
 
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(15, 0, 255), *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertPwmOutputs);
-  digitalWrite(y3Pin, LOW);
-  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertPwmOutputs);
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(15, 0, 255), *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertDriverOutputs);
+  digitalWriteInv(y3Pin, LOW, *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->tccChannel, 0, *invertDriverOutputs);
 }
 
 void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition currentLeverPosition, int gear)
@@ -320,8 +320,8 @@ void ShiftControl::select_five_to_fivetcc(VaLas_Controller::GearLeverPosition cu
 
   vTaskDelay(gearboxSettings[gear - 2].UpshiftDelay);
 
-  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(25, 0, 255), *invertPwmOutputs);
-  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertPwmOutputs);
-  digitalWrite(y3Pin, LOW);
-  ledcWritePwm(pwmChannelsPointer->tccChannel, (255 * 97) / 100, *invertPwmOutputs); //97% for torque converter lockup with some slip for comfort
+  ledcWritePwm(pwmChannelsPointer->mpcChannel, constrain(25, 0, 255), *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->spcChannel, 0, *invertDriverOutputs);
+  digitalWriteInv(y3Pin, LOW, *invertDriverOutputs);
+  ledcWritePwm(pwmChannelsPointer->tccChannel, (255 * 97) / 100, *invertDriverOutputs); //97% for torque converter lockup with some slip for comfort
 }

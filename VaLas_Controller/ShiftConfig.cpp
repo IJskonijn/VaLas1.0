@@ -27,7 +27,7 @@ static bool* g_useThrottlePositionPtr = nullptr;
 static VaLas_Controller::ThrottleCalibration* g_throttleSettingsPtr = nullptr;
 static VaLas_Controller::PressureTimeMapSettings* g_pressureTimeMapPtr = nullptr;
 static VaLas_Controller::LockupControlSettings* g_lockupSettingsPtr = nullptr;
-static bool* g_invertPwmOutputsPtr = nullptr;
+static bool* g_invertDriverOutputsPtr = nullptr;
 
 // Static default settings for display purposes
 static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
@@ -37,7 +37,7 @@ static bool g_defaultUseCanBus = false;
 static bool g_defaultUsePedalShifters = false;
 static VaLas_Controller::PressureTimeMapSettings g_defaultPressureTimeMap;
 static VaLas_Controller::LockupControlSettings g_defaultLockupSettings;
-static bool g_defaultInvertPwmOutputs = true;
+static bool g_defaultInvertDriverOutputs = true;
 static File g_importFile;
 
 static void handleRoot();
@@ -100,7 +100,7 @@ void ShiftConfig::execute(void * parameter)
   VaLas_Controller::ShiftSetting* gearboxSettingsPtr = parameters->shiftSettings;
   VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr = parameters->pressureTimeMapPtr;
   VaLas_Controller::LockupControlSettings* lockupSettingsPtr = parameters->lockupSettingsPtr;
-  bool* invertPwmOutputsPtr = parameters->invertPwmOutputsPtr;
+  bool* invertDriverOutputsPtr = parameters->invertDriverOutputsPtr;
 
   if (!webServerInitialized)
   {
@@ -112,7 +112,7 @@ void ShiftConfig::execute(void * parameter)
     g_throttleSettingsPtr = throttleSettingsPtr;
     g_pressureTimeMapPtr = pressureTimeMapPtr;
     g_lockupSettingsPtr = lockupSettingsPtr;
-    g_invertPwmOutputsPtr = invertPwmOutputsPtr;
+    g_invertDriverOutputsPtr = invertDriverOutputsPtr;
 
     webServer.on("/", HTTP_GET, handleRoot);
     webServer.on("/save", HTTP_POST, handleSave);
@@ -135,7 +135,7 @@ void ShiftConfig::execute(void * parameter)
   vTaskDelay(20);
 }
 
-void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr)
+void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr)
 {
   // Expose the config pointers now (e.g. for getDisplayIsLarge()) instead of waiting for the
   // web server task's first tick, which runs after displayHandler.begin() during setup().
@@ -147,16 +147,16 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
   g_throttleSettingsPtr = throttleSettingsPtr;
   g_pressureTimeMapPtr = pressureTimeMapPtr;
   g_lockupSettingsPtr = lockupSettingsPtr;
-  g_invertPwmOutputsPtr = invertPwmOutputsPtr;
+  g_invertDriverOutputsPtr = invertDriverOutputsPtr;
 
   if (spiffsMountingSuccess)
   {
-    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertPwmOutputsPtr);
+    bool isLoadedFromFile = loadConfigFromFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertDriverOutputsPtr);
     if (isLoadedFromFile)
       return;
 
     CreateDefaultConfig(shiftSettingsPtr);
-    writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertPwmOutputsPtr);
+    writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertDriverOutputsPtr);
   }
   else
   {
@@ -164,7 +164,7 @@ void ShiftConfig::LoadDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetting
   }
 }
 
-bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr)
+bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr)
 {
   const char filePath[16] = "/config.json"; 
   File file = SPIFFS.open(filePath, "r");
@@ -183,13 +183,13 @@ bool ShiftConfig::loadConfigFromFile(VaLas_Controller::ShiftSetting* shiftSettin
     return false;
   }
 
-  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertPwmOutputsPtr, doc);
+  createObjectFromJson(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertDriverOutputsPtr, doc);
 
   file.close();
   return true;
 }
 
-bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr)
+bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr)
 {  
   const char filePath[16] = "/config.json";  
   File file = SPIFFS.open(filePath, "w");
@@ -198,7 +198,7 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   }
   
   static StaticJsonDocument<3072> doc;
-  createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertPwmOutputsPtr, doc);
+  createJsonFromObject(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertDriverOutputsPtr, doc);
 
   if (serializeJson(doc, file) == 0) {
     file.close();
@@ -209,7 +209,7 @@ bool ShiftConfig::writeConfigToFile(VaLas_Controller::ShiftSetting* shiftSetting
   return true;
 }
 
-void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr, StaticJsonDocument<3072>& doc)
+void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr, StaticJsonDocument<3072>& doc)
 {
   doc.clear();
   doc["UseCanBus"] = *useCanBusPtr;
@@ -218,7 +218,7 @@ void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSett
   doc["UseThrottlePosition"] = *useThrottlePositionPtr;
   doc["TpsClosedAdc"] = throttleSettingsPtr->closedAdc;
   doc["TpsWideOpenAdc"] = throttleSettingsPtr->wideOpenAdc;
-  doc["InvertPwmOutputs"] = *invertPwmOutputsPtr;
+  doc["InvertDriverOutputs"] = *invertDriverOutputsPtr;
 
   JsonObject lockup = doc.createNestedObject("Lockup");
   lockup["Enabled"] = lockupSettingsPtr->enabled;
@@ -269,7 +269,7 @@ void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSett
 
 }
 
-void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr, const StaticJsonDocument<3072>& doc)
+void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr, const StaticJsonDocument<3072>& doc)
 {
   // extract the values
   *useCanBusPtr = doc["UseCanBus"].as<bool>();
@@ -280,7 +280,7 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
   throttleSettingsPtr->wideOpenAdc = doc["TpsWideOpenAdc"] | 4095;
 
   // Missing key (older saved config) defaults to the current inverting PCB.
-  *invertPwmOutputsPtr = doc["InvertPwmOutputs"] | true;
+  *invertDriverOutputsPtr = doc["InvertDriverOutputs"] | true;
 
   VaLas_Controller::LockupControlSettings defaultLockup;
   JsonObjectConst lockup = doc["Lockup"];
@@ -407,7 +407,7 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   shiftSettings[5].DownshiftTorqueConverterLockup = 0;
 }
 
-void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertPwmOutputsPtr)
+void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, bool* useCanBusPtr, bool* usePedalShiftersPtr, bool* useLargeDisplayPtr, bool* useThrottlePositionPtr, VaLas_Controller::ThrottleCalibration* throttleSettingsPtr, VaLas_Controller::PressureTimeMapSettings* pressureTimeMapPtr, VaLas_Controller::LockupControlSettings* lockupSettingsPtr, bool* invertDriverOutputsPtr)
 {
   if (!spiffsMountingSuccess)
   {
@@ -415,7 +415,7 @@ void ShiftConfig::SaveConfig(VaLas_Controller::ShiftSetting* shiftSettingsPtr, b
     return;
   }
 
-  if (!writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertPwmOutputsPtr))
+  if (!writeConfigToFile(shiftSettingsPtr, useCanBusPtr, usePedalShiftersPtr, useLargeDisplayPtr, useThrottlePositionPtr, throttleSettingsPtr, pressureTimeMapPtr, lockupSettingsPtr, invertDriverOutputsPtr))
   {
     Serial.println("Failed to save config to file");
   }
@@ -439,7 +439,7 @@ static void sendAndClose(int code, const char* contentType, const String& conten
 
 static void handleRoot()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertPwmOutputsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
   {
     sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -488,13 +488,13 @@ static void handleRoot()
   html += g_defaultUseThrottlePosition ? "checked" : "unchecked";
   html += ")<br><br>";
 
-  html += F("<fieldset><legend>PWM output inversion (PCB hardware revision):</legend>");
-  html += F("<p class='hint'>Enable for the current 2-channel lowside-MOSFET driver PCB, whose pre-driver stage flips the duty-cycle sense on the MPC/SPC/TCC channels together. Uncheck only if you revert to the older, non-inverting PCB.</p>");
-  html += F("<label><input type='checkbox' name='invertPwmOutputs'");
-  if (*g_invertPwmOutputsPtr) html += F(" checked");
-  html += F("> Invert MPC/SPC/TCC PWM outputs</label>");
+  html += F("<fieldset><legend>Output inversion (PCB hardware revision):</legend>");
+  html += F("<p class='hint'>Enable for the current PCB, whose IXDI602PI inverting gate drivers flip the logic sense of the MPC/SPC/TCC PWM channels and the y3/y4/y5 shift solenoid outputs together. Uncheck only if you revert to the older, non-inverting PCB.</p>");
+  html += F("<label><input type='checkbox' name='invertDriverOutputs'");
+  if (*g_invertDriverOutputsPtr) html += F(" checked");
+  html += F("> Invert MPC/SPC/TCC + shift solenoid outputs</label>");
   html += " (default: ";
-  html += g_defaultInvertPwmOutputs ? "checked" : "unchecked";
+  html += g_defaultInvertDriverOutputs ? "checked" : "unchecked";
   html += ")<br></fieldset><br>";
 
   html += F("<details id='sensorDebug'><summary>Debug: N2/N3 + ATF sensor test</summary>");
@@ -624,7 +624,7 @@ static void handleRoot()
 // Handle reset: restore defaults, save, and redirect
 static void handleReset()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertPwmOutputsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
   {
     sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -639,10 +639,10 @@ static void handleReset()
   *g_throttleSettingsPtr = VaLas_Controller::ThrottleCalibration();
   *g_pressureTimeMapPtr = VaLas_Controller::PressureTimeMapSettings();
   *g_lockupSettingsPtr = VaLas_Controller::LockupControlSettings();
-  *g_invertPwmOutputsPtr = g_defaultInvertPwmOutputs;
+  *g_invertDriverOutputsPtr = g_defaultInvertDriverOutputs;
 
   // Save to SPIFFS
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
 
   Serial.println("[WEB] Reset action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
@@ -667,7 +667,7 @@ static void handleReset()
 
 static void handleSave()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertPwmOutputsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
   {
     sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -678,7 +678,7 @@ static void handleSave()
   *g_usePedalShiftersPtr = webServer.hasArg("usePedalShifters");
   *g_useLargeDisplayPtr = webServer.hasArg("useLargeDisplay");
   *g_useThrottlePositionPtr = webServer.hasArg("useThrottlePosition");
-  *g_invertPwmOutputsPtr = webServer.hasArg("invertPwmOutputs");
+  *g_invertDriverOutputsPtr = webServer.hasArg("invertDriverOutputs");
   if (webServer.hasArg("tpsClosedAdc")) g_throttleSettingsPtr->closedAdc = constrain(webServer.arg("tpsClosedAdc").toInt(), 0, 4095);
   if (webServer.hasArg("tpsWideOpenAdc")) g_throttleSettingsPtr->wideOpenAdc = constrain(webServer.arg("tpsWideOpenAdc").toInt(), 0, 4095);
   g_lockupSettingsPtr->enabled = webServer.hasArg("lockupEnabled");
@@ -727,7 +727,7 @@ static void handleSave()
   }
 
   // Persist to SPIFFS via ShiftConfig wrapper
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
   Serial.println("[WEB] Save action received");
   Serial.print("[WEB] useCanBus: "); Serial.println(*g_useCanBusPtr);
   Serial.print("[WEB] usePedalShifters: "); Serial.println(*g_usePedalShiftersPtr);
@@ -751,7 +751,7 @@ static void handleSave()
 
 static void handleExport()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertPwmOutputsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
   {
     sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -759,7 +759,7 @@ static void handleExport()
 
   static StaticJsonDocument<3072> doc;
   shiftConfig.createJsonFromObject(
-    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr, doc);
+    g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr, doc);
   String json;
   serializeJsonPretty(doc, json);
   webServer.sendHeader("Content-Disposition", "attachment; filename=config.json");
@@ -790,7 +790,7 @@ static void handleImportUpload()
 
 static void handleImport()
 {
-  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertPwmOutputsPtr)
+  if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
   {
     sendAndClose(500, "text/plain", "Configuration not initialised yet");
     return;
@@ -817,8 +817,8 @@ static void handleImport()
     return;
   }
 
-  ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr, doc);
-  if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr))
+  ShiftConfig::createObjectFromJson(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr, doc);
+  if (!shiftConfig.writeConfigToFile(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr))
   {
     sendAndClose(500, "text/plain", "Import failed: could not save configuration");
     return;
@@ -843,7 +843,7 @@ static void handleCalibrateClosed()
   }
 
   g_throttleSettingsPtr->closedAdc = rawAdc;
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
   sendAndClose(200, "text/plain", "Closed throttle calibration saved");
 }
 
@@ -861,7 +861,7 @@ static void handleCalibrateWideOpen()
   }
 
   g_throttleSettingsPtr->wideOpenAdc = rawAdc;
-  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertPwmOutputsPtr);
+  shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
   sendAndClose(200, "text/plain", "Wide-open throttle calibration saved");
 }
 
@@ -893,7 +893,7 @@ static void initDefaultSettings() {
   g_defaultUsePedalShifters = true;
   g_defaultPressureTimeMap = VaLas_Controller::PressureTimeMapSettings();
   g_defaultLockupSettings = VaLas_Controller::LockupControlSettings();
-  g_defaultInvertPwmOutputs = true;
+  g_defaultInvertDriverOutputs = true;
 }
 
 bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")

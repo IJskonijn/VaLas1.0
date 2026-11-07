@@ -11,7 +11,7 @@ class ShiftControlV2 {
 	public:
 		void init(DisplayHandler* displayHandlerPtr, VaLas_Controller::PwmChannels* pwmChannelsPtr, Gearlever* gearLeverPtr,
 			VaLas_Controller::DisplayScreen* screenToDisplayPtr, VaLas_Controller::ShiftSetting* gearboxSettingsPtr,
-			bool* invertPwmOutputsPtr);
+			bool* invertDriverOutputsPtr);
 		void execute(void * parameter);
 
 	private:

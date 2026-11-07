@@ -169,4 +169,11 @@ inline void ledcWritePwm(uint8_t channel, int value, bool invert)
   ledcWrite(channel, invert ? (255 - constrain(value, 0, 255)) : value);
 }
 
+// Same idea as ledcWritePwm but for the on/off shift solenoid pins (y3/y4/y5), which can share the
+// same inverting gate driver IC as the PWM channels on a given PCB revision.
+inline void digitalWriteInv(uint8_t pin, uint8_t value, bool invert)
+{
+  digitalWrite(pin, invert ? !value : value);
+}
+
 #endif
