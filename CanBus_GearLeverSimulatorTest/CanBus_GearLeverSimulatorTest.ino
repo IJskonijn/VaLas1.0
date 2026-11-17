@@ -10,20 +10,21 @@
  *   - Send Downshift (value 10) down to 1
  * - Return to P and repeat
  * 
+ * Uses same library as VaLas_Controller: mcp_can.h
  * CAN ID: 0x230
  * Values: 5=Drive, 6=Neutral, 7=Reverse, 8=Park, 9=Upshift, 10=Downshift
  */
 
-#include <mcp2515.h>
+#include <Arduino.h>
+#include <SPI.h>
+#include <mcp_can.h>
 
 #define CAN_ID 0x230
-#define CAN_SPEED MCP_8MHz_500kBPS
+#define SPI_CS_PIN 5
 
-MCP2515 mcp2515(5);  // CS pin = GPIO 5
+MCP_CAN CAN(SPI_CS_PIN);
 
-struct can_frame canMsg;
-
-// CAN values from Gearlever_CAN.cpp
+// CAN values
 #define VAL_DRIVE       5
 #define VAL_NEUTRAL     6
 #define VAL_REVERSE     7
@@ -49,7 +50,6 @@ enum State {
 State currentState = PARK;
 unsigned long lastStateChangeTime = 0;
 const unsigned long INTERVAL_MS = 3000;
-int currentGear = 2;
 
 void setup() {
   Serial.begin(115200);
@@ -58,15 +58,14 @@ void setup() {
   Serial.println("\nGear Lever Simulator - Starting");
   Serial.println("================================\n");
   
-  SPI.begin(18, 19, 23, 5);  // CLK, MISO, MOSI, CS
-  mcp2515.reset();
-  mcp2515.setBitrate(CAN_SPEED);
-  mcp2515.setNormalMode();
+  if(CAN.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK) {
+    Serial.println("MCP2515 Initialized Successfully!");
+    Serial.println("CAN ID: 0x230 @ 500kbps\n");
+  } else {
+    Serial.println("Error Initializing MCP2515...");
+  }
   
-  Serial.println("CAN Initialized (0x230 @ 500kbps)\n");
-  
-  canMsg.can_id = CAN_ID;
-  canMsg.can_dlc = 1;
+  CAN.setMode(MCP_NORMAL);
   
   lastStateChangeTime = millis();
 }
@@ -93,42 +92,34 @@ void advanceState() {
       break;
     case NEUTRAL:
       currentState = DRIVE_2;
-      currentGear = 2;
       Serial.println("→ Drive (Gear 2)");
       break;
     case DRIVE_2:
       currentState = UPSHIFT_TO_3;
-      currentGear = 3;
       Serial.println("→ Upshift to Gear 3");
       break;
     case UPSHIFT_TO_3:
       currentState = UPSHIFT_TO_4;
-      currentGear = 4;
       Serial.println("→ Upshift to Gear 4");
       break;
     case UPSHIFT_TO_4:
       currentState = UPSHIFT_TO_5;
-      currentGear = 5;
       Serial.println("→ Upshift to Gear 5");
       break;
     case UPSHIFT_TO_5:
       currentState = DOWNSHIFT_TO_4;
-      currentGear = 4;
       Serial.println("→ Downshift to Gear 4");
       break;
     case DOWNSHIFT_TO_4:
       currentState = DOWNSHIFT_TO_3;
-      currentGear = 3;
       Serial.println("→ Downshift to Gear 3");
       break;
     case DOWNSHIFT_TO_3:
       currentState = DOWNSHIFT_TO_2;
-      currentGear = 2;
       Serial.println("→ Downshift to Gear 2");
       break;
     case DOWNSHIFT_TO_2:
       currentState = DOWNSHIFT_TO_1;
-      currentGear = 1;
       Serial.println("→ Downshift to Gear 1");
       break;
     case DOWNSHIFT_TO_1:
@@ -174,8 +165,8 @@ void sendCAN() {
       break;
   }
   
-  canMsg.data[0] = value;
-  mcp2515.sendMessage(&canMsg);
+  unsigned char data[1] = {value};
+  CAN.sendMsgBuf(CAN_ID, 0, 1, data);
   
   Serial.print("[0x");
   Serial.print(value, HEX);
