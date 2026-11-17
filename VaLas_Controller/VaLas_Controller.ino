@@ -188,12 +188,12 @@ void setup()
   pinMode(startRelayPin, OUTPUT);
   digitalWrite(startRelayPin, LOW);
 
-  pinMode(y3Pin, OUTPUT | OPEN_DRAIN);
-  pinMode(y4Pin, OUTPUT | OPEN_DRAIN);
-  pinMode(y5Pin, OUTPUT | OPEN_DRAIN);
-  pinMode(mpcPin, OUTPUT | OPEN_DRAIN);
-  pinMode(spcPin, OUTPUT | OPEN_DRAIN);
-  pinMode(tccPin, OUTPUT | OPEN_DRAIN);
+  pinMode(y3Pin, OUTPUT); // v1 = OUTPUT | OPEN_DRAIN, v2 = OUTPUT
+  pinMode(y4Pin, OUTPUT);
+  pinMode(y5Pin, OUTPUT);
+  pinMode(mpcPin, OUTPUT);
+  pinMode(spcPin, OUTPUT);
+  pinMode(tccPin, OUTPUT);
 
   // ledcSetup(uint8_t channel, uint32_t frequency, uint8_t resolution_bits);
   ledcSetup(pwmChannels.mpcChannel, pwmFreq, 8); // PWM, 8-bit resolution > 0-255
@@ -280,7 +280,7 @@ void setup()
 void gearLeverHandlerTask(void* parameter){
   TaskStructs::GearLeverParameters* params = (TaskStructs::GearLeverParameters*) parameter;
 
-  for(;;){
+  for(;;){ 
     gearLeverInterface->ReadGearLever(parameter);
     outputs.IsStartAllowed(*(params->currentLeverPositionPtr));
     vTaskDelay(100 / portTICK_PERIOD_MS);
