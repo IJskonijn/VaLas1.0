@@ -38,12 +38,19 @@ enum State {
   REVERSE,
   NEUTRAL,
   DRIVE_2,
+  DRIVE_CENTER_1,
   UPSHIFT_TO_3,
+  DRIVE_CENTER_2,
   UPSHIFT_TO_4,
+  DRIVE_CENTER_3,
   UPSHIFT_TO_5,
+  DRIVE_CENTER_4,
   DOWNSHIFT_TO_4,
+  DRIVE_CENTER_5,
   DOWNSHIFT_TO_3,
+  DRIVE_CENTER_6,
   DOWNSHIFT_TO_2,
+  DRIVE_CENTER_7,
   DOWNSHIFT_TO_1
 };
 
@@ -99,30 +106,58 @@ void advanceState() {
       Serial.println("→ Upshift to Gear 3");
       break;
     case UPSHIFT_TO_3:
+      currentState = DRIVE_CENTER_1;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_1:
       currentState = UPSHIFT_TO_4;
       Serial.println("→ Upshift to Gear 4");
       break;
     case UPSHIFT_TO_4:
+      currentState = DRIVE_CENTER_2;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_2:
       currentState = UPSHIFT_TO_5;
       Serial.println("→ Upshift to Gear 5");
       break;
     case UPSHIFT_TO_5:
+      currentState = DRIVE_CENTER_3;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_3:
       currentState = DOWNSHIFT_TO_4;
       Serial.println("→ Downshift to Gear 4");
       break;
     case DOWNSHIFT_TO_4:
+      currentState = DRIVE_CENTER_4;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_4:
       currentState = DOWNSHIFT_TO_3;
       Serial.println("→ Downshift to Gear 3");
       break;
     case DOWNSHIFT_TO_3:
+      currentState = DRIVE_CENTER_5;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_5:
       currentState = DOWNSHIFT_TO_2;
       Serial.println("→ Downshift to Gear 2");
       break;
     case DOWNSHIFT_TO_2:
+      currentState = DRIVE_CENTER_6;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_6:
       currentState = DOWNSHIFT_TO_1;
       Serial.println("→ Downshift to Gear 1");
       break;
     case DOWNSHIFT_TO_1:
+      currentState = DRIVE_CENTER_7;
+      Serial.println("→ Drive (center - releasing lever)");
+      break;
+    case DRIVE_CENTER_7:
       currentState = PARK;
       Serial.println("→ Park (cycle complete)\n");
       break;
@@ -150,18 +185,28 @@ void sendCAN() {
       value = VAL_DRIVE;
       label = "DRIVE (G2)";
       break;
+    case DRIVE_CENTER_1:
+    case DRIVE_CENTER_2:
+    case DRIVE_CENTER_3:
+    case DRIVE_CENTER_4:
+    case DRIVE_CENTER_5:
+    case DRIVE_CENTER_6:
+    case DRIVE_CENTER_7:
+      value = VAL_DRIVE;
+      label = "DRIVE (center)";
+      break;
     case UPSHIFT_TO_3:
     case UPSHIFT_TO_4:
     case UPSHIFT_TO_5:
       value = VAL_UPSHIFT;
-      label = "UPSHIFT";
+      label = "UPSHIFT (+)";
       break;
     case DOWNSHIFT_TO_4:
     case DOWNSHIFT_TO_3:
     case DOWNSHIFT_TO_2:
     case DOWNSHIFT_TO_1:
       value = VAL_DOWNSHIFT;
-      label = "DOWNSHIFT";
+      label = "DOWNSHIFT (-)";
       break;
   }
   
