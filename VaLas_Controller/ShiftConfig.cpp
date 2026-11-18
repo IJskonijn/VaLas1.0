@@ -358,7 +358,7 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   // Upshift = 3 > 4
   // Downshift = 3 > 2
   shiftSettings[2].Name = "D3";
-  shiftSettings[2].UpshiftDelay = 900; // Was 1200
+  shiftSettings[2].UpshiftDelay = 1200; // Was 1200, tried 900
   shiftSettings[2].UpshiftLinePressure = 90;
   shiftSettings[2].UpshiftShiftPressure = 100;
   shiftSettings[2].UpshiftTorqueConverterLockup = 150; // Steady-state lockup target once trend-gated lockup engages (see LockupControlSettings)
