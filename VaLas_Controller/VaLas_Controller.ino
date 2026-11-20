@@ -27,6 +27,11 @@
 #include "Gearlever_CAN.h"
 #include "Gearlever_Modded.h"
 
+// Gear lever override (debug web UI), implemented in ShiftConfig.cpp alongside its other
+// web-exposed settings.
+extern bool IsGearLeverOverrideActive();
+extern void ApplyGearLeverOverride(TaskStructs::GearLeverParameters* params);
+
 int pwmFreq = 1000;
 VaLas_Controller::PwmChannels pwmChannels;
 
@@ -281,7 +286,13 @@ void gearLeverHandlerTask(void* parameter){
   TaskStructs::GearLeverParameters* params = (TaskStructs::GearLeverParameters*) parameter;
 
   for(;;){ 
-    gearLeverInterface->ReadGearLever(parameter);
+    // Debug "Gear lever override" (web UI): forces P/R/N/D from the browser instead of the real
+    // CAN bus / potentiometer reading when that reading can't be trusted. See ShiftConfig.cpp.
+    if (IsGearLeverOverrideActive())
+      ApplyGearLeverOverride(params);
+    else
+      gearLeverInterface->ReadGearLever(parameter);
+
     outputs.IsStartAllowed(*(params->currentLeverPositionPtr));
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }

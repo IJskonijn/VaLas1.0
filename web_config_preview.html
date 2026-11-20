@@ -53,7 +53,7 @@
     <br>
 
     <details id="sensorDebug">
-      <summary>Debug: N2/N3 + ATF sensor test</summary>
+      <summary>Debug:</summary>
       <p class="hint">Works the same in V1 or V2 (not tied to the throttle position toggle above).</p>
       <b>N2/N3 speed sensors</b>
       <p class="hint">Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>
@@ -65,6 +65,20 @@
       <b>ATF temp sensor</b>
       <label>ATF temp: <span>-</span></label>
       <p class="hint">The ATF sensor wire is shared with the P/N park-lock switch, so readings always report invalid while in P/N - that's expected. Check this in D or R only. Live on the device (polls /atf-debug every 500ms while expanded); static placeholder in this preview.</p>
+
+      <hr>
+      <b>Gear lever override</b>
+      <p class="hint">Use when CAN bus communication with the physical lever is unreliable: forces P/R/N/D from here instead of trusting the CAN/sensor reading. Physical up/down shift buttons (steering wheel / pedal shifters) and the manual buttons below both keep working while this is active.</p>
+      <label><input type="checkbox" id="gearLeverOverrideEnabled" onchange="toggleGearLeverOverridePreview(this.checked)"> Enable gear lever override</label><br>
+      <div id="gearLeverOverrideControls" style="display:none">
+        <label>Lever position: <select id="gearLeverOverridePosition">
+          <option value="Park">Park</option>
+          <option value="Reverse">Reverse</option>
+          <option value="Neutral">Neutral</option>
+          <option value="Drive" selected>Drive</option>
+        </select></label><br>
+        <label>Manual shift: <button type="button" onclick="alert('Preview only: would send a downshift request on the ESP32.');">Downshift</button> <button type="button" onclick="alert('Preview only: would send an upshift request on the ESP32.');">Upshift</button></label>
+      </div>
     </details>
 
     <h3>D1</h3>
@@ -257,6 +271,9 @@
       }
     }
     detectGearRatioPreset();
+    function toggleGearLeverOverridePreview(enabled) {
+      document.getElementById('gearLeverOverrideControls').style.display = enabled ? '' : 'none';
+    }
   </script>
 </body>
 </html>

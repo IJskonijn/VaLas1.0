@@ -29,6 +29,13 @@ static VaLas_Controller::PressureTimeMapSettings* g_pressureTimeMapPtr = nullptr
 static VaLas_Controller::LockupControlSettings* g_lockupSettingsPtr = nullptr;
 static bool* g_invertDriverOutputsPtr = nullptr;
 
+// Gear lever override (debug): lets the web UI force a P/R/N/D position and inject manual
+// up/down shift requests when CAN bus communication with the physical lever is unreliable.
+// Transient only (not persisted to SPIFFS) so it always starts disabled on a reboot.
+static bool g_gearLeverOverrideEnabled = false;
+static VaLas_Controller::GearLeverPosition g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+static VaLas_Controller::ShiftRequest g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+
 // Static default settings for display purposes
 static VaLas_Controller::ShiftSetting g_defaultShiftSettings[6];
 static bool g_defaultUseLargeDisplay = false;
@@ -51,6 +58,9 @@ static void handleCalibrateWideOpen();
 static void handleTpsAdc();
 static void handleN2N3Debug();
 static void handleAtfDebug();
+static void handleOverrideSave();
+static void handleOverrideUpshift();
+static void handleOverrideDownshift();
 static void initDefaultSettings();
 static void sendAndClose(int code, const char* contentType, const String& content);
 
@@ -124,6 +134,9 @@ void ShiftConfig::execute(void * parameter)
     webServer.on("/tps-adc", HTTP_GET, handleTpsAdc);
     webServer.on("/n2n3-debug", HTTP_GET, handleN2N3Debug);
     webServer.on("/atf-debug", HTTP_GET, handleAtfDebug);
+    webServer.on("/override", HTTP_POST, handleOverrideSave);
+    webServer.on("/override/upshift", HTTP_POST, handleOverrideUpshift);
+    webServer.on("/override/downshift", HTTP_POST, handleOverrideDownshift);
     webServer.begin();
     webServerInitialized = true;
 
@@ -359,8 +372,8 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   // Downshift = 3 > 2
   shiftSettings[2].Name = "D3";
   shiftSettings[2].UpshiftDelay = 1200; // Was 1200, tried 900
-  shiftSettings[2].UpshiftLinePressure = 90;
-  shiftSettings[2].UpshiftShiftPressure = 100;
+  shiftSettings[2].UpshiftLinePressure = 120; // Was 90
+  shiftSettings[2].UpshiftShiftPressure = 120; // Was 100
   shiftSettings[2].UpshiftTorqueConverterLockup = 150; // Steady-state lockup target once trend-gated lockup engages (see LockupControlSettings)
   shiftSettings[2].DownshiftDelay = 600;
   shiftSettings[2].DownshiftLinePressure = 180;
@@ -372,7 +385,7 @@ void ShiftConfig::CreateDefaultConfig(VaLas_Controller::ShiftSetting* shiftSetti
   // Downshift = 4 > 3
   shiftSettings[3].Name = "D4";
   shiftSettings[3].UpshiftDelay = 600;
-  shiftSettings[3].UpshiftLinePressure = 100; // was 120, now 100 to match original code
+  shiftSettings[3].UpshiftLinePressure = 120; // was 120, now 100 to match original code
   shiftSettings[3].UpshiftShiftPressure = 120;
   shiftSettings[3].UpshiftTorqueConverterLockup = 190; // Steady-state lockup target once trend-gated lockup engages (see LockupControlSettings)
   shiftSettings[3].DownshiftDelay = 600;
@@ -497,7 +510,7 @@ static void handleRoot()
   html += g_defaultInvertDriverOutputs ? "checked" : "unchecked";
   html += ")<br></fieldset><br>";
 
-  html += F("<details id='sensorDebug'><summary>Debug: N2/N3 + ATF sensor test</summary>");
+  html += F("<details id='sensorDebug'><summary>Debug:</summary>");
   html += F("<p class='hint'>Works the same in V1 or V2 (not tied to the throttle position toggle above).</p>");
   html += F("<b>N2/N3 speed sensors</b>");
   html += F("<p class='hint'>Spin the output shaft by hand (ignition on, engine off) and confirm the pulse counts move.</p>");
@@ -510,6 +523,31 @@ static void handleRoot()
   html += F("<div class='setting-row'><label>ATF temp:</label><span id='atfTempValue'>-</span></div>");
   html += F("<div class='setting-row'><label>Raw ADC:</label><span id='atfRawAdc'>-</span></div>");
   html += F("<p class='hint'>The ATF sensor wire is shared with the P/N park-lock switch, so readings always report invalid while in P/N - that's expected. Check this in D or R only. Raw ADC should sit roughly 550-1050 in D/R (varies with temperature); pegged near 0 or near 4095 there points to a wiring fault rather than the P/N quirk.</p>");
+
+  html += F("<hr><b>Gear lever override</b>");
+  html += F("<p class='hint'>Use when CAN bus communication with the physical lever is unreliable: forces P/R/N/D from here instead of trusting the CAN/sensor reading. Physical up/down shift buttons (steering wheel / pedal shifters) and the manual buttons below both keep working while this is active.</p>");
+  html += F("<label><input type='checkbox' id='gearLeverOverrideEnabled' onchange='toggleGearLeverOverride(this.checked)'");
+  if (g_gearLeverOverrideEnabled) html += F(" checked");
+  html += F("> Enable gear lever override</label><br>");
+  html += "<div id='gearLeverOverrideControls' style='" + String(g_gearLeverOverrideEnabled ? "" : "display:none") + "'>";
+  html += F("<div class='setting-row'><label>Lever position:</label><select id='gearLeverOverridePosition' onchange=\"setGearLeverOverridePosition(this.value)\">");
+  {
+    const VaLas_Controller::GearLeverPosition positions[4] = {
+      VaLas_Controller::GearLeverPosition::Park, VaLas_Controller::GearLeverPosition::Reverse,
+      VaLas_Controller::GearLeverPosition::Neutral, VaLas_Controller::GearLeverPosition::Drive
+    };
+    const char* labels[4] = {"Park", "Reverse", "Neutral", "Drive"};
+    for (int i = 0; i < 4; i++)
+    {
+      html += "<option value='" + String(labels[i]) + "'";
+      if (positions[i] == g_overrideLeverPosition) html += F(" selected");
+      html += ">" + String(labels[i]) + "</option>";
+    }
+  }
+  html += F("</select></div>");
+  html += F("<div class='setting-row'><label>Manual shift:</label><span><button type='button' onclick=\"sendGearLeverOverrideShift('downshift')\">Downshift</button> <button type='button' onclick=\"sendGearLeverOverrideShift('upshift')\">Upshift</button></span></div>");
+  html += F("</div>");
+
   html += F("</details><br>");
 
   for (int i = 0; i < 6; i++)
@@ -615,7 +653,84 @@ static void handleRoot()
   html += F("<input type='file' name='config' accept='.json,application/json' required>");
   html += F(" <input type='submit' value='Import JSON'>");
   html += F("</form>");
-  html += F("<script>var GEAR_RATIO_PRESETS={small:[3.9319,2.4079,1.4857,1.0000,0.8305],big:[3.5876,2.1862,1.4054,1.0000,0.8314]};\nfunction toggleThrottleSections(){var d=document.getElementById('useThrottlePosition').checked?'':'none';document.getElementById('tpsCalibration').style.display=d;document.getElementById('pressureTimeMap').style.display=d;document.getElementById('lockupSettings').style.display=d;}\nfunction applyGearRatioPreset(which){var ratios=GEAR_RATIO_PRESETS[which];for(var i=0;i<5;i++){document.getElementsByName('lockupRatio'+i)[0].value=ratios[i];}}\nfunction toggleGearRatioExpertMode(){document.getElementById('gearRatioFields').style.display=document.getElementById('gearRatioExpertMode').checked?'':'none';}\nfunction matchesPreset(ratios,current){for(var i=0;i<5;i++){if(Math.abs(ratios[i]-current[i])>0.001)return false;}return true;}\nfunction detectGearRatioPreset(){var current=[];for(var i=0;i<5;i++){current.push(parseFloat(document.getElementsByName('lockupRatio'+i)[0].value));}if(matchesPreset(GEAR_RATIO_PRESETS.small,current)){document.getElementById('gearRatioPresetSmall').checked=true;}else if(matchesPreset(GEAR_RATIO_PRESETS.big,current)){document.getElementById('gearRatioPresetBig').checked=true;}else{document.getElementById('gearRatioExpertMode').checked=true;toggleGearRatioExpertMode();}}\ndetectGearRatioPreset();\nsetInterval(function(){if(document.getElementById('tpsCalibration').style.display==='none')return;fetch('/tps-adc').then(function(r){return r.text();}).then(function(v){document.getElementById('currentAdcValue').textContent=v;}).catch(function(){});},500);\nfunction fetchSensorDebug(){if(!document.getElementById('sensorDebug').open)return;fetch('/n2n3-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];document.getElementById('n2n3Calc').textContent=p[4];document.getElementById('n2n3Trend').textContent=p[5];}).catch(function(){});fetch('/atf-debug').then(function(r){return r.text();}).then(function(v){var p=v.split(',');document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';document.getElementById('atfRawAdc').textContent=p[2];}).catch(function(){});}\ndocument.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\nsetInterval(fetchSensorDebug,500);\nif (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }</script>");
+
+  html += F("<script>\n");
+  html += F("var GEAR_RATIO_PRESETS={small:[3.9319,2.4079,1.4857,1.0000,0.8305],big:[3.5876,2.1862,1.4054,1.0000,0.8314]};\n");
+  html += F("function toggleThrottleSections(){\n");
+  html += F("  var d=document.getElementById('useThrottlePosition').checked?'':'none';\n");
+  html += F("  document.getElementById('tpsCalibration').style.display=d;\n");
+  html += F("  document.getElementById('pressureTimeMap').style.display=d;\n");
+  html += F("  document.getElementById('lockupSettings').style.display=d;\n");
+  html += F("}\n");
+  html += F("function applyGearRatioPreset(which){\n");
+  html += F("  var ratios=GEAR_RATIO_PRESETS[which];\n");
+  html += F("  for(var i=0;i<5;i++){ document.getElementsByName('lockupRatio'+i)[0].value=ratios[i]; }\n");
+  html += F("}\n");
+  html += F("function toggleGearRatioExpertMode(){\n");
+  html += F("  document.getElementById('gearRatioFields').style.display=document.getElementById('gearRatioExpertMode').checked?'':'none';\n");
+  html += F("}\n");
+  html += F("function matchesPreset(ratios,current){\n");
+  html += F("  for(var i=0;i<5;i++){ if(Math.abs(ratios[i]-current[i])>0.001) return false; }\n");
+  html += F("  return true;\n");
+  html += F("}\n");
+  html += F("function detectGearRatioPreset(){\n");
+  html += F("  var current=[];\n");
+  html += F("  for(var i=0;i<5;i++){ current.push(parseFloat(document.getElementsByName('lockupRatio'+i)[0].value)); }\n");
+  html += F("  if(matchesPreset(GEAR_RATIO_PRESETS.small,current)){\n");
+  html += F("    document.getElementById('gearRatioPresetSmall').checked=true;\n");
+  html += F("  } else if(matchesPreset(GEAR_RATIO_PRESETS.big,current)){\n");
+  html += F("    document.getElementById('gearRatioPresetBig').checked=true;\n");
+  html += F("  } else {\n");
+  html += F("    document.getElementById('gearRatioExpertMode').checked=true;\n");
+  html += F("    toggleGearRatioExpertMode();\n");
+  html += F("  }\n");
+  html += F("}\n");
+  html += F("detectGearRatioPreset();\n");
+  html += F("setInterval(function(){\n");
+  html += F("  if(document.getElementById('tpsCalibration').style.display==='none') return;\n");
+  html += F("  fetch('/tps-adc').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    document.getElementById('currentAdcValue').textContent=v;\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("},500);\n");
+  html += F("function fetchSensorDebug(){\n");
+  html += F("  if(!document.getElementById('sensorDebug').open) return;\n");
+  html += F("  fetch('/n2n3-debug').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    var p=v.split(',');\n");
+  html += F("    document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];\n");
+  html += F("    document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];\n");
+  html += F("    document.getElementById('n2n3Calc').textContent=p[4];\n");
+  html += F("    document.getElementById('n2n3Trend').textContent=p[5];\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("  fetch('/atf-debug').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    var p=v.split(',');\n");
+  html += F("    document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';\n");
+  html += F("    document.getElementById('atfRawAdc').textContent=p[2];\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("}\n");
+  html += F("document.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\n");
+  html += F("setInterval(fetchSensorDebug,500);\n");
+  html += F("function postGearLeverOverride(enabled,position){\n");
+  html += F("  fetch('/override',{\n");
+  html += F("    method:'POST',\n");
+  html += F("    headers:{'Content-Type':'application/x-www-form-urlencoded'},\n");
+  html += F("    body:'enabled='+(enabled?'1':'0')+'&position='+position\n");
+  html += F("  });\n");
+  html += F("}\n");
+  html += F("function toggleGearLeverOverride(enabled){\n");
+  html += F("  document.getElementById('gearLeverOverrideControls').style.display=enabled?'':'none';\n");
+  html += F("  postGearLeverOverride(enabled,document.getElementById('gearLeverOverridePosition').value);\n");
+  html += F("}\n");
+  html += F("function setGearLeverOverridePosition(position){\n");
+  html += F("  postGearLeverOverride(document.getElementById('gearLeverOverrideEnabled').checked,position);\n");
+  html += F("}\n");
+  html += F("function sendGearLeverOverrideShift(which){\n");
+  html += F("  fetch('/override/'+which,{method:'POST'}).then(function(r){\n");
+  html += F("    if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
+  html += F("  });\n");
+  html += F("}\n");
+  html += F("if (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }\n");
+  html += F("</script>");
+
   html += F("</body></html>");
 
   sendAndClose(200, "text/html", html);
@@ -888,6 +1003,64 @@ static void handleAtfDebug()
   sendAndClose(200, "text/plain", csv);
 }
 
+static void handleOverrideSave()
+{
+  if (webServer.hasArg("enabled"))
+    g_gearLeverOverrideEnabled = webServer.arg("enabled").toInt() != 0;
+
+  if (webServer.hasArg("position"))
+  {
+    String pos = webServer.arg("position");
+    if (pos == "Park") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Park;
+    else if (pos == "Reverse") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
+    else if (pos == "Neutral") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
+    else if (pos == "Drive") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+  }
+
+  Serial.print("[WEB] Gear lever override: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
+  Serial.print(", position="); Serial.println(webServer.hasArg("position") ? webServer.arg("position") : "-");
+
+  sendAndClose(200, "text/plain", "OK");
+}
+
+static void handleOverrideUpshift()
+{
+  if (!g_gearLeverOverrideEnabled)
+  {
+    sendAndClose(400, "text/plain", "Gear lever override is not enabled");
+    return;
+  }
+  if (g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Drive && g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
+  {
+    // ShiftControl/V2 only ever complete a shift request while in Drive/Reverse (see their own
+    // "Only process shift requests in Drive or Reverse" guard) - queuing one here regardless would
+    // get silently stuck (never consumed, never completed) and block all further overrides until
+    // the lever position is changed, so reject it up front with a clear reason instead.
+    sendAndClose(400, "text/plain", "Lever position must be Drive or Reverse to shift");
+    return;
+  }
+  g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::UpShift;
+  Serial.println("[WEB] Gear lever override: manual upshift requested");
+  sendAndClose(200, "text/plain", "OK");
+}
+
+static void handleOverrideDownshift()
+{
+  if (!g_gearLeverOverrideEnabled)
+  {
+    sendAndClose(400, "text/plain", "Gear lever override is not enabled");
+    return;
+  }
+  if (g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Drive && g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
+  {
+    sendAndClose(400, "text/plain", "Lever position must be Drive or Reverse to shift");
+    return;
+  }
+  g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::DownShift;
+  Serial.println("[WEB] Gear lever override: manual downshift requested");
+  sendAndClose(200, "text/plain", "OK");
+}
+
 // Helper to initialize the static default settings
 static void initDefaultSettings() {
   ShiftConfig::CreateDefaultConfig(g_defaultShiftSettings);
@@ -902,4 +1075,54 @@ static void initDefaultSettings() {
 
 bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")
   return g_useLargeDisplayPtr ? *g_useLargeDisplayPtr : false;
+}
+
+// Gear lever override (debug, see the "Debug:" web UI section). Called from gearLeverHandlerTask
+// in the main .ino *instead of* gearLeverInterface->ReadGearLever() while active, so a flaky CAN
+// bus is bypassed entirely for the reported lever position. Safe to skip the real ReadGearLever()
+// call here because the override always starts disabled on boot (see g_gearLeverOverrideEnabled
+// above), so by the time a user can enable it, ReadGearLever has already run at least once and
+// wired up gearLeverInterface's internal CompleteShiftRequest()/Reset() pointers.
+bool IsGearLeverOverrideActive()
+{
+  return g_gearLeverOverrideEnabled;
+}
+
+void ApplyGearLeverOverride(TaskStructs::GearLeverParameters* params)
+{
+  static int lastUpShiftState = HIGH;
+  static int lastDownShiftState = HIGH;
+
+  *(params->oldLeverPositionPtr) = *(params->currentLeverPositionPtr);
+  *(params->currentLeverPositionPtr) = g_overrideLeverPosition;
+
+  // Physical up/down shift buttons (steering wheel / pedal shifters) are read directly here, the
+  // same edge-triggered way Gearlever_Modded does, so they keep working even though a flaky CAN
+  // bus can't be trusted to relay them via the normal gear lever path.
+  int upShiftState = digitalRead(upShiftPin);
+  int downShiftState = digitalRead(downShiftPin);
+  bool upShiftPressed = (upShiftState == LOW && lastUpShiftState == HIGH);
+  bool downShiftPressed = (downShiftState == LOW && lastDownShiftState == HIGH);
+  lastUpShiftState = upShiftState;
+  lastDownShiftState = downShiftState;
+
+  if (*(params->currentShiftRequestPtr) != VaLas_Controller::ShiftRequest::NoShift)
+    return; // ShiftControl hasn't completed the previous request yet
+
+  if (upShiftPressed)
+  {
+    *(params->currentShiftRequestPtr) = VaLas_Controller::ShiftRequest::UpShift;
+    Serial.println("[Override] Upshift button pressed");
+  }
+  else if (downShiftPressed)
+  {
+    *(params->currentShiftRequestPtr) = VaLas_Controller::ShiftRequest::DownShift;
+    Serial.println("[Override] Downshift button pressed");
+  }
+  else if (g_overrideManualShiftRequest != VaLas_Controller::ShiftRequest::NoShift)
+  {
+    *(params->currentShiftRequestPtr) = g_overrideManualShiftRequest;
+    g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
+    Serial.println("[Override] Manual web shift button applied");
+  }
 }
