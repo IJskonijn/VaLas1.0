@@ -31,7 +31,9 @@ static bool* g_invertDriverOutputsPtr = nullptr;
 
 // Gear lever override (debug): lets the web UI force a P/R/N/D position and inject manual
 // up/down shift requests when CAN bus communication with the physical lever is unreliable.
-// Transient only (not persisted to SPIFFS) so it always starts disabled on a reboot.
+// enabled/position are persisted to SPIFFS (see createJsonFromObject/createObjectFromJson) so a
+// debug session survives a reboot; the manual shift request itself is deliberately NOT persisted
+// since it's a momentary one-shot action, not an ongoing state.
 static bool g_gearLeverOverrideEnabled = false;
 static VaLas_Controller::GearLeverPosition g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
 static VaLas_Controller::ShiftRequest g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::NoShift;
@@ -235,6 +237,8 @@ void ShiftConfig::createJsonFromObject(VaLas_Controller::ShiftSetting* shiftSett
   doc["TpsClosedAdc"] = throttleSettingsPtr->closedAdc;
   doc["TpsWideOpenAdc"] = throttleSettingsPtr->wideOpenAdc;
   doc["InvertDriverOutputs"] = *invertDriverOutputsPtr;
+  doc["GearLeverOverrideEnabled"] = g_gearLeverOverrideEnabled;
+  doc["GearLeverOverridePosition"] = overridePositionName(g_overrideLeverPosition);
 
   JsonObject lockup = doc.createNestedObject("Lockup");
   lockup["Enabled"] = lockupSettingsPtr->enabled;
@@ -297,6 +301,15 @@ void ShiftConfig::createObjectFromJson(VaLas_Controller::ShiftSetting* shiftSett
 
   // Missing key (older saved config) defaults to the current inverting PCB.
   *invertDriverOutputsPtr = doc["InvertDriverOutputs"] | true;
+
+  // Gear lever override (debug): persisted so a stationary debug session survives a reboot, but
+  // defaults to safely disabled + Drive if missing (older config.json, or never saved before).
+  g_gearLeverOverrideEnabled = doc["GearLeverOverrideEnabled"] | false;
+  String overridePositionStr = (const char*)(doc["GearLeverOverridePosition"] | "Drive");
+  if (overridePositionStr == "Park") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Park;
+  else if (overridePositionStr == "Reverse") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
+  else if (overridePositionStr == "Neutral") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
+  else g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
 
   VaLas_Controller::LockupControlSettings defaultLockup;
   JsonObjectConst lockup = doc["Lockup"];
@@ -447,8 +460,14 @@ extern ShiftConfig shiftConfig; // defined in VaLas_Controller.ino
 // connection. Mobile browsers are often slow to close keep-alive sockets, which was
 // starving the 500ms debug/status polling (mobile clients mostly saw stuck/zero readings).
 // Force-closing from the server side right after sending fixes this.
+//
+// Also disables caching for every response: this page/script changes on every firmware
+// re-flash, and without this a browser can silently keep serving a stale cached copy of the
+// HTML/JS after an update (no visible error - new behavior just doesn't show up at all),
+// unless the user remembers to hard-refresh. Not worth the risk for a low-traffic local page.
 static void sendAndClose(int code, const char* contentType, const String& content)
 {
+  webServer.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   webServer.send(code, contentType, content);
   webServer.client().stop();
 }
@@ -648,8 +667,8 @@ static void handleRoot()
   html += F("</fieldset><br>");
 
   html += F("<input type='submit' value='Save'>");
-  html += F(" <button type='button' onclick=\"if(confirm('Are you sure you want to reset to defaults?')){fetch('/reset',{method:'POST'}).then(()=>window.location.reload());}\">Reset</button>");
   html += F("</form>");
+  html += F("<form method='POST' action='/reset' style='display:inline' onsubmit=\"return confirm('Are you sure you want to reset to defaults?');\"><button type='submit'>Reset</button></form>");
   html += F("<hr><h3>Import / Export</h3>");
   html += F("<form method='GET' action='/export'><button type='submit'>Download current config.json</button></form>");
   html += F("<form method='POST' action='/import' enctype='multipart/form-data'>");
@@ -759,8 +778,8 @@ static void handleReset()
   *g_pressureTimeMapPtr = VaLas_Controller::PressureTimeMapSettings();
   *g_lockupSettingsPtr = VaLas_Controller::LockupControlSettings();
   *g_invertDriverOutputsPtr = g_defaultInvertDriverOutputs;
-  // The gear lever override is transient (not persisted to SPIFFS), but "reset to defaults"
-  // should still turn it back off rather than silently leaving a debug override engaged.
+  // "Reset to defaults" also turns the gear lever override back off (rather than leaving a debug
+  // override engaged) - this is persisted below along with everything else.
   g_gearLeverOverrideEnabled = false;
   g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
 
@@ -1060,6 +1079,11 @@ static void handleOverrideSave()
 
   Serial.print("[WEB] Gear lever override: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
   Serial.print(", position="); Serial.println(overridePositionName(g_overrideLeverPosition));
+
+  // Persist immediately (not just on the main Save button) so this instant-apply toggle survives
+  // a reboot too, matching the rest of the config.
+  if (g_shiftSettingsPtr)
+    shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
 
   sendAndClose(200, "text/plain", "OK");
 }
