@@ -737,7 +737,7 @@ static void handleRoot()
   html += F("    keepalive:true,\n");
   html += F("    headers:{'Content-Type':'application/x-www-form-urlencoded'},\n");
   html += F("    body:'enabled='+(enabled?'1':'0')+'&position='+position\n");
-  html += F("  });\n");
+  html += F("  }).catch(function(e){ alert('Override update failed to reach the device: '+e); });\n");
   html += F("}\n");
   html += F("function toggleGearLeverOverride(enabled){\n");
   html += F("  document.getElementById('gearLeverOverrideControls').style.display=enabled?'':'none';\n");
@@ -747,9 +747,17 @@ static void handleRoot()
   html += F("  postGearLeverOverride(document.getElementById('gearLeverOverrideEnabled').checked,position);\n");
   html += F("}\n");
   html += F("function sendGearLeverOverrideShift(which){\n");
-  html += F("  fetch('/override/'+which,{method:'POST',keepalive:true}).then(function(r){\n");
-  html += F("    if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
-  html += F("  });\n");
+  html += F("  function attempt(retrying){\n");
+  html += F("    fetch('/override/'+which,{method:'POST',keepalive:true}).then(function(r){\n");
+  html += F("      if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
+  html += F("    }).catch(function(e){\n");
+  html += F("      // The ESP32 only serves one TCP client at a time, so this can collide with the\n");
+  html += F("      // 500ms debug polling above; retry once after a short delay before giving up.\n");
+  html += F("      if(!retrying) return setTimeout(function(){ attempt(true); },300);\n");
+  html += F("      alert('Shift request failed to reach the device: '+e);\n");
+  html += F("    });\n");
+  html += F("  }\n");
+  html += F("  attempt(false);\n");
   html += F("}\n");
   html += F("if (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }\n");
   html += F("</script>");
@@ -1143,10 +1151,13 @@ bool getDisplayIsLarge() { // true = 128x64, false = 128x32 (0.96" vs 0.91")
 
 // Gear lever override (debug, see the "Debug:" web UI section). Called from gearLeverHandlerTask
 // in the main .ino *instead of* gearLeverInterface->ReadGearLever() while active, so a flaky CAN
-// bus is bypassed entirely for the reported lever position. Safe to skip the real ReadGearLever()
-// call here because the override always starts disabled on boot (see g_gearLeverOverrideEnabled
-// above), so by the time a user can enable it, ReadGearLever has already run at least once and
-// wired up gearLeverInterface's internal CompleteShiftRequest()/Reset() pointers.
+// bus is bypassed entirely for the reported lever position. The override's enabled/position state
+// is persisted and can therefore already be active from the very first tick after boot - safe to
+// skip the real ReadGearLever() call here regardless, because gearLeverHandlerTask always makes
+// one unconditional priming call to it before its main loop starts (see VaLas_Controller.ino),
+// which wires up gearLeverInterface's internal CompleteShiftRequest()/Reset() pointers before this
+// function can ever run. Without that priming call, those pointers would stay null and the first
+// CompleteShiftRequest() call from ShiftControl would dereference null and crash.
 bool IsGearLeverOverrideActive()
 {
   return g_gearLeverOverrideEnabled;

@@ -285,6 +285,15 @@ void setup()
 void gearLeverHandlerTask(void* parameter){
   TaskStructs::GearLeverParameters* params = (TaskStructs::GearLeverParameters*) parameter;
 
+  // Always read the real gear lever once at startup, even if the override already loads as
+  // enabled from a persisted config. This wires up gearLeverInterface's internal
+  // CompleteShiftRequest()/Reset() state pointer before ApplyGearLeverOverride() ever runs -
+  // otherwise that pointer stays null (never assigned) and the first CompleteShiftRequest() call
+  // from ShiftControl dereferences it, crashing (Core 0 panic). Harmless even with a flaky CAN
+  // bus: whatever position this one read produces gets overwritten by the override on the very
+  // next tick, ~100ms later.
+  gearLeverInterface->ReadGearLever(parameter);
+
   for(;;){ 
     // Debug "Gear lever override" (web UI): forces P/R/N/D from the browser instead of the real
     // CAN bus / potentiometer reading when that reading can't be trusted. See ShiftConfig.cpp.
