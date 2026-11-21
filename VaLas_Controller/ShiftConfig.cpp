@@ -59,9 +59,11 @@ static void handleTpsAdc();
 static void handleN2N3Debug();
 static void handleAtfDebug();
 static void handleOverrideSave();
+static void handleOverrideShiftRequest(VaLas_Controller::ShiftRequest request, const char* requestName);
 static void handleOverrideUpshift();
 static void handleOverrideDownshift();
 static bool applyOverridePositionArg(const String& argName);
+static const char* overridePositionName(VaLas_Controller::GearLeverPosition pos);
 static void initDefaultSettings();
 static void sendAndClose(int code, const char* contentType, const String& content);
 
@@ -771,6 +773,8 @@ static void handleReset()
   Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
   Serial.print("[WEB] useThrottlePosition: "); Serial.println(*g_useThrottlePositionPtr);
   Serial.print("[WEB] useInvertDriverOutputs: "); Serial.println(*g_invertDriverOutputsPtr);
+  Serial.print("[WEB] gearLeverOverride: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
+  Serial.print(", position="); Serial.println(overridePositionName(g_overrideLeverPosition));
   for (int i = 0; i < 6; i++) {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
     Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
@@ -803,6 +807,19 @@ static bool applyOverridePositionArg(const String& argName)
   else return false;
 
   return true;
+}
+
+// Human-readable name for Serial logging; matches the <option> values used in the override dropdown.
+static const char* overridePositionName(VaLas_Controller::GearLeverPosition pos)
+{
+  switch (pos)
+  {
+    case VaLas_Controller::GearLeverPosition::Park: return "Park";
+    case VaLas_Controller::GearLeverPosition::Reverse: return "Reverse";
+    case VaLas_Controller::GearLeverPosition::Neutral: return "Neutral";
+    case VaLas_Controller::GearLeverPosition::Drive: return "Drive";
+    default: return "Unknown";
+  }
 }
 
 static void handleSave()
@@ -880,6 +897,8 @@ static void handleSave()
   Serial.print("[WEB] useLargeDisplay: "); Serial.println(*g_useLargeDisplayPtr);
   Serial.print("[WEB] useThrottlePosition: "); Serial.println(*g_useThrottlePositionPtr);
   Serial.print("[WEB] useInvertDriverOutputs: "); Serial.println(*g_invertDriverOutputsPtr);
+  Serial.print("[WEB] gearLeverOverride: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
+  Serial.print(", position="); Serial.println(overridePositionName(g_overrideLeverPosition));
   for (int i = 0; i < 6; i++) {
     const VaLas_Controller::ShiftSetting& s = g_shiftSettingsPtr[i];
     Serial.print("[WEB] "); Serial.print(s.Name); Serial.print(": UDelay="); Serial.print(s.UpshiftDelay);
@@ -1040,15 +1059,20 @@ static void handleOverrideSave()
   applyOverridePositionArg("position");
 
   Serial.print("[WEB] Gear lever override: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
-  Serial.print(", position="); Serial.println(webServer.hasArg("position") ? webServer.arg("position") : "-");
+  Serial.print(", position="); Serial.println(overridePositionName(g_overrideLeverPosition));
 
   sendAndClose(200, "text/plain", "OK");
 }
 
-static void handleOverrideUpshift()
+// Shared by handleOverrideUpshift()/handleOverrideDownshift(): validates the override is enabled
+// and in Drive/Reverse, logs the outcome either way, and queues the manual shift request if valid.
+static void handleOverrideShiftRequest(VaLas_Controller::ShiftRequest request, const char* requestName)
 {
+  Serial.print("[WEB] /override/"); Serial.print(requestName); Serial.println(" received");
+
   if (!g_gearLeverOverrideEnabled)
   {
+    Serial.println("[WEB] Gear lever override: rejected - override not enabled");
     sendAndClose(400, "text/plain", "Gear lever override is not enabled");
     return;
   }
@@ -1058,29 +1082,23 @@ static void handleOverrideUpshift()
     // "Only process shift requests in Drive or Reverse" guard) - queuing one here regardless would
     // get silently stuck (never consumed, never completed) and block all further overrides until
     // the lever position is changed, so reject it up front with a clear reason instead.
+    Serial.print("[WEB] Gear lever override: rejected - lever position is "); Serial.println(overridePositionName(g_overrideLeverPosition));
     sendAndClose(400, "text/plain", "Lever position must be Drive or Reverse to shift");
     return;
   }
-  g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::UpShift;
-  Serial.println("[WEB] Gear lever override: manual upshift requested");
+  g_overrideManualShiftRequest = request;
+  Serial.print("[WEB] Gear lever override: manual "); Serial.print(requestName); Serial.println(" requested");
   sendAndClose(200, "text/plain", "OK");
+}
+
+static void handleOverrideUpshift()
+{
+  handleOverrideShiftRequest(VaLas_Controller::ShiftRequest::UpShift, "upshift");
 }
 
 static void handleOverrideDownshift()
 {
-  if (!g_gearLeverOverrideEnabled)
-  {
-    sendAndClose(400, "text/plain", "Gear lever override is not enabled");
-    return;
-  }
-  if (g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Drive && g_overrideLeverPosition != VaLas_Controller::GearLeverPosition::Reverse)
-  {
-    sendAndClose(400, "text/plain", "Lever position must be Drive or Reverse to shift");
-    return;
-  }
-  g_overrideManualShiftRequest = VaLas_Controller::ShiftRequest::DownShift;
-  Serial.println("[WEB] Gear lever override: manual downshift requested");
-  sendAndClose(200, "text/plain", "OK");
+  handleOverrideShiftRequest(VaLas_Controller::ShiftRequest::DownShift, "downshift");
 }
 
 // Helper to initialize the static default settings
@@ -1114,6 +1132,7 @@ void ApplyGearLeverOverride(TaskStructs::GearLeverParameters* params)
 {
   static int lastUpShiftState = HIGH;
   static int lastDownShiftState = HIGH;
+  static bool loggedDeferred = false;
 
   *(params->oldLeverPositionPtr) = *(params->currentLeverPositionPtr);
   *(params->currentLeverPositionPtr) = g_overrideLeverPosition;
@@ -1129,7 +1148,17 @@ void ApplyGearLeverOverride(TaskStructs::GearLeverParameters* params)
   lastDownShiftState = downShiftState;
 
   if (*(params->currentShiftRequestPtr) != VaLas_Controller::ShiftRequest::NoShift)
-    return; // ShiftControl hasn't completed the previous request yet
+  {
+    // ShiftControl hasn't completed the previous request yet. Log once (not every ~100ms tick) so
+    // a queued manual web request shows up as "waiting" instead of silently appearing to do nothing.
+    if (g_overrideManualShiftRequest != VaLas_Controller::ShiftRequest::NoShift && !loggedDeferred)
+    {
+      Serial.println("[Override] Manual web shift button is queued, waiting for the current shift to complete");
+      loggedDeferred = true;
+    }
+    return;
+  }
+  loggedDeferred = false;
 
   if (upShiftPressed)
   {
