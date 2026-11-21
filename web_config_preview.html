@@ -69,9 +69,9 @@
       <hr>
       <b>Gear lever override</b>
       <p class="hint">Use when CAN bus communication with the physical lever is unreliable: forces P/R/N/D from here instead of trusting the CAN/sensor reading. Physical up/down shift buttons (steering wheel / pedal shifters) and the manual buttons below both keep working while this is active.</p>
-      <label><input type="checkbox" id="gearLeverOverrideEnabled" onchange="toggleGearLeverOverridePreview(this.checked)"> Enable gear lever override</label><br>
+      <label><input type="checkbox" id="gearLeverOverrideEnabled" name="gearLeverOverrideEnabled" onchange="toggleGearLeverOverridePreview(this.checked)"> Enable gear lever override</label><br>
       <div id="gearLeverOverrideControls" style="display:none">
-        <label>Lever position: <select id="gearLeverOverridePosition">
+        <label>Lever position: <select id="gearLeverOverridePosition" name="gearLeverOverridePosition">
           <option value="Park">Park</option>
           <option value="Reverse">Reverse</option>
           <option value="Neutral">Neutral</option>

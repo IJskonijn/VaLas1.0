@@ -61,6 +61,7 @@ static void handleAtfDebug();
 static void handleOverrideSave();
 static void handleOverrideUpshift();
 static void handleOverrideDownshift();
+static bool applyOverridePositionArg(const String& argName);
 static void initDefaultSettings();
 static void sendAndClose(int code, const char* contentType, const String& content);
 
@@ -526,11 +527,11 @@ static void handleRoot()
 
   html += F("<hr><b>Gear lever override</b>");
   html += F("<p class='hint'>Use when CAN bus communication with the physical lever is unreliable: forces P/R/N/D from here instead of trusting the CAN/sensor reading. Physical up/down shift buttons (steering wheel / pedal shifters) and the manual buttons below both keep working while this is active.</p>");
-  html += F("<label><input type='checkbox' id='gearLeverOverrideEnabled' onchange='toggleGearLeverOverride(this.checked)'");
+  html += F("<label><input type='checkbox' id='gearLeverOverrideEnabled' name='gearLeverOverrideEnabled' onchange='toggleGearLeverOverride(this.checked)'");
   if (g_gearLeverOverrideEnabled) html += F(" checked");
   html += F("> Enable gear lever override</label><br>");
   html += "<div id='gearLeverOverrideControls' style='" + String(g_gearLeverOverrideEnabled ? "" : "display:none") + "'>";
-  html += F("<div class='setting-row'><label>Lever position:</label><select id='gearLeverOverridePosition' onchange=\"setGearLeverOverridePosition(this.value)\">");
+  html += F("<div class='setting-row'><label>Lever position:</label><select id='gearLeverOverridePosition' name='gearLeverOverridePosition' onchange=\"setGearLeverOverridePosition(this.value)\">");
   {
     const VaLas_Controller::GearLeverPosition positions[4] = {
       VaLas_Controller::GearLeverPosition::Park, VaLas_Controller::GearLeverPosition::Reverse,
@@ -712,6 +713,7 @@ static void handleRoot()
   html += F("function postGearLeverOverride(enabled,position){\n");
   html += F("  fetch('/override',{\n");
   html += F("    method:'POST',\n");
+  html += F("    keepalive:true,\n");
   html += F("    headers:{'Content-Type':'application/x-www-form-urlencoded'},\n");
   html += F("    body:'enabled='+(enabled?'1':'0')+'&position='+position\n");
   html += F("  });\n");
@@ -724,7 +726,7 @@ static void handleRoot()
   html += F("  postGearLeverOverride(document.getElementById('gearLeverOverrideEnabled').checked,position);\n");
   html += F("}\n");
   html += F("function sendGearLeverOverrideShift(which){\n");
-  html += F("  fetch('/override/'+which,{method:'POST'}).then(function(r){\n");
+  html += F("  fetch('/override/'+which,{method:'POST',keepalive:true}).then(function(r){\n");
   html += F("    if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
   html += F("  });\n");
   html += F("}\n");
@@ -755,6 +757,10 @@ static void handleReset()
   *g_pressureTimeMapPtr = VaLas_Controller::PressureTimeMapSettings();
   *g_lockupSettingsPtr = VaLas_Controller::LockupControlSettings();
   *g_invertDriverOutputsPtr = g_defaultInvertDriverOutputs;
+  // The gear lever override is transient (not persisted to SPIFFS), but "reset to defaults"
+  // should still turn it back off rather than silently leaving a debug override engaged.
+  g_gearLeverOverrideEnabled = false;
+  g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
 
   // Save to SPIFFS
   shiftConfig.SaveConfig(g_shiftSettingsPtr, g_useCanBusPtr, g_usePedalShiftersPtr, g_useLargeDisplayPtr, g_useThrottlePositionPtr, g_throttleSettingsPtr, g_pressureTimeMapPtr, g_lockupSettingsPtr, g_invertDriverOutputsPtr);
@@ -782,6 +788,23 @@ static void handleReset()
   sendAndClose(302, "text/html", "<!DOCTYPE html><html><body>Redirecting...</body></html>");
 }
 
+// Shared by handleSave() and handleOverrideSave(): reads a posted P/R/N/D-position field (if
+// present) and applies it to g_overrideLeverPosition. Returns true if a recognised value was found.
+static bool applyOverridePositionArg(const String& argName)
+{
+  if (!webServer.hasArg(argName))
+    return false;
+
+  String pos = webServer.arg(argName);
+  if (pos == "Park") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Park;
+  else if (pos == "Reverse") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
+  else if (pos == "Neutral") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
+  else if (pos == "Drive") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
+  else return false;
+
+  return true;
+}
+
 static void handleSave()
 {
   if (!g_shiftSettingsPtr || !g_useCanBusPtr || !g_usePedalShiftersPtr || !g_useLargeDisplayPtr || !g_useThrottlePositionPtr || !g_throttleSettingsPtr || !g_pressureTimeMapPtr || !g_lockupSettingsPtr || !g_invertDriverOutputsPtr)
@@ -796,6 +819,12 @@ static void handleSave()
   *g_useLargeDisplayPtr = webServer.hasArg("useLargeDisplay");
   *g_useThrottlePositionPtr = webServer.hasArg("useThrottlePosition");
   *g_invertDriverOutputsPtr = webServer.hasArg("invertDriverOutputs");
+  // Gear lever override: this normally applies instantly via its own onchange -> /override POST,
+  // but that's a fire-and-forget fetch that can be lost if the page navigates away (e.g. clicking
+  // Save right after flipping it) before the ESP32 has processed it. Re-applying it here from the
+  // same fields, now part of this form, makes a Save always land the override state too.
+  g_gearLeverOverrideEnabled = webServer.hasArg("gearLeverOverrideEnabled");
+  applyOverridePositionArg("gearLeverOverridePosition");
   if (webServer.hasArg("tpsClosedAdc")) g_throttleSettingsPtr->closedAdc = constrain(webServer.arg("tpsClosedAdc").toInt(), 0, 4095);
   if (webServer.hasArg("tpsWideOpenAdc")) g_throttleSettingsPtr->wideOpenAdc = constrain(webServer.arg("tpsWideOpenAdc").toInt(), 0, 4095);
   g_lockupSettingsPtr->enabled = webServer.hasArg("lockupEnabled");
@@ -1008,14 +1037,7 @@ static void handleOverrideSave()
   if (webServer.hasArg("enabled"))
     g_gearLeverOverrideEnabled = webServer.arg("enabled").toInt() != 0;
 
-  if (webServer.hasArg("position"))
-  {
-    String pos = webServer.arg("position");
-    if (pos == "Park") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Park;
-    else if (pos == "Reverse") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Reverse;
-    else if (pos == "Neutral") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Neutral;
-    else if (pos == "Drive") g_overrideLeverPosition = VaLas_Controller::GearLeverPosition::Drive;
-  }
+  applyOverridePositionArg("position");
 
   Serial.print("[WEB] Gear lever override: "); Serial.print(g_gearLeverOverrideEnabled ? "ON" : "OFF");
   Serial.print(", position="); Serial.println(webServer.hasArg("position") ? webServer.arg("position") : "-");
