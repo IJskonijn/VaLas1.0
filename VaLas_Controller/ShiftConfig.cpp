@@ -473,7 +473,10 @@ static void sendAndClose(int code, const char* contentType, const String& conten
 {
   webServer.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   webServer.send(code, contentType, content);
-  //webServer.client().stop();
+  // Close explicitly so the single TCP slot ESP32WebServer serves is freed immediately
+  // instead of lingering on keep-alive; relevant again now that the UI serializes several
+  // fetches (debug polling + overrides) back-to-back via the client-side queue.
+  webServer.client().stop();
 }
 
 static void handleRoot()
@@ -549,7 +552,6 @@ static void handleRoot()
   html += F("<div class='setting-row'><label>ATF temp:</label><span id='atfTempValue'>-</span></div>");
   html += F("<div class='setting-row'><label>Raw ADC:</label><span id='atfRawAdc'>-</span></div>");
   html += F("<p class='hint'>The ATF sensor wire is shared with the P/N park-lock switch, so readings always report invalid while in P/N - that's expected. Check this in D or R only. Raw ADC should sit roughly 550-1050 in D/R (varies with temperature); pegged near 0 or near 4095 there points to a wiring fault rather than the P/N quirk.</p>");
-  // Both ATF and N2/N3 debug fetches give ERR_CONNECTION_RESET fetchSensorDebug setInterval
 
   html += F("<hr><b>Gear lever override</b>");
   html += F("<p class='hint'>Use when CAN bus communication with the physical lever is unreliable: forces P/R/N/D from here instead of trusting the CAN/sensor reading. Physical up/down shift buttons (steering wheel / pedal shifters) and the manual buttons below both keep working while this is active.</p>");
@@ -573,7 +575,7 @@ static void handleRoot()
   }
   html += F("</select></div>");
   html += F("<div class='setting-row'><label>Manual shift:</label><span><button type='button' onclick=\"sendGearLeverOverrideShift('downshift')\">Downshift</button> <button type='button' onclick=\"sendGearLeverOverrideShift('upshift')\">Upshift</button></span></div>");
-  html += F("</div>"); // Both give TypeError: Failed to fetch. This is in Edge, Firefox on mobile swallows the error
+  html += F("</div>");
 
   html += F("</details><br>");
 
@@ -713,36 +715,57 @@ static void handleRoot()
   html += F("  }\n");
   html += F("}\n");
   html += F("detectGearRatioPreset();\n");
-  // html += F("setInterval(function(){\n");
-  // html += F("  if(document.getElementById('tpsCalibration').style.display==='none') return;\n");
-  // html += F("  fetch('/tps-adc').then(function(r){ return r.text(); }).then(function(v){\n");
-  // html += F("    document.getElementById('currentAdcValue').textContent=v;\n");
-  // html += F("  }).catch(function(){});\n");
-  // html += F("},5000);\n");
-  // html += F("function fetchSensorDebug(){\n");
-  // html += F("  if(!document.getElementById('sensorDebug').open) return;\n");
-  // html += F("  fetch('/n2n3-debug').then(function(r){ return r.text(); }).then(function(v){\n");
-  // html += F("    var p=v.split(',');\n");
-  // html += F("    document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];\n");
-  // html += F("    document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];\n");
-  // html += F("    document.getElementById('n2n3Calc').textContent=p[4];\n");
-  // html += F("    document.getElementById('n2n3Trend').textContent=p[5];\n");
-  // html += F("  }).catch(function(){});\n");
-  // html += F("  fetch('/atf-debug').then(function(r){ return r.text(); }).then(function(v){\n");
-  // html += F("    var p=v.split(',');\n");
-  // html += F("    document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';\n");
-  // html += F("    document.getElementById('atfRawAdc').textContent=p[2];\n");
-  // html += F("  }).catch(function(){});\n");
-  // html += F("}\n");
-  // html += F("document.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\n");
-  // html += F("setInterval(fetchSensorDebug,5000);\n");
+  // ESP32WebServer only serves one TCP client at a time, so overlapping fetch() calls here
+  // (debug polling vs. overrides vs. shift requests) used to collide and surface as
+  // ERR_CONNECTION_RESET / "Failed to fetch". espFetch() serializes every request to the
+  // device through a single queue so only one is ever in flight; a per-request timeout keeps
+  // one stuck/dropped request from blocking everything queued behind it indefinitely.
+  html += F("var espQueueTail=Promise.resolve();\n");
+  html += F("function espFetch(url,options,timeoutMs){\n");
+  html += F("  timeoutMs=timeoutMs||4000;\n");
+  html += F("  var request=espQueueTail.then(function(){\n");
+  html += F("    return Promise.race([\n");
+  html += F("      fetch(url,options),\n");
+  html += F("      new Promise(function(resolve,reject){ setTimeout(function(){ reject(new Error('Request to '+url+' timed out')); },timeoutMs); })\n");
+  html += F("    ]);\n");
+  html += F("  });\n");
+  html += F("  espQueueTail=request.catch(function(){});\n"); // swallow here so one failure doesn't jam the queue; caller still sees the rejection below
+  html += F("  return request;\n");
+  html += F("}\n");
+  // All POST requests to the device use the same urlencoded-form shape; this wraps espFetch
+  // so call sites only need to supply the URL, body and any one-off extras (e.g. keepalive).
+  html += F("function espPostForm(url,body,extraOptions){\n");
+  html += F("  var options={method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body};\n");
+  html += F("  if(extraOptions){ for(var k in extraOptions){ options[k]=extraOptions[k]; } }\n");
+  html += F("  return espFetch(url,options);\n");
+  html += F("}\n");
+  html += F("function updateTpsAdc(){\n");
+  html += F("  if(document.getElementById('tpsCalibration').style.display==='none') return;\n");
+  html += F("  espFetch('/tps-adc').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    document.getElementById('currentAdcValue').textContent=v;\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("}\n");
+  html += F("setInterval(updateTpsAdc,1000);\n");
+  html += F("function fetchSensorDebug(){\n");
+  html += F("  if(!document.getElementById('sensorDebug').open) return;\n");
+  html += F("  espFetch('/n2n3-debug').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    var p=v.split(',');\n");
+  html += F("    document.getElementById('n2n3Pulses').textContent=p[0]+' / '+p[1];\n");
+  html += F("    document.getElementById('n2n3Rpms').textContent=p[2]+' / '+p[3];\n");
+  html += F("    document.getElementById('n2n3Calc').textContent=p[4];\n");
+  html += F("    document.getElementById('n2n3Trend').textContent=p[5];\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("  espFetch('/atf-debug').then(function(r){ return r.text(); }).then(function(v){\n");
+  html += F("    var p=v.split(',');\n");
+  html += F("    document.getElementById('atfTempValue').textContent=p[1]==='1'?(p[0]+' C'):'invalid (P/N?)';\n");
+  html += F("    document.getElementById('atfRawAdc').textContent=p[2];\n");
+  html += F("  }).catch(function(){});\n");
+  html += F("}\n");
+  html += F("document.getElementById('sensorDebug').addEventListener('toggle',fetchSensorDebug);\n");
+  html += F("setInterval(fetchSensorDebug,1000);\n");
   html += F("function postGearLeverOverride(enabled,position){\n");
-  html += F("  fetch('/override',{\n");
-  html += F("    method:'POST',\n");
-  html += F("    keepalive:true,\n");
-  html += F("    headers:{'Content-Type':'application/x-www-form-urlencoded'},\n");
-  html += F("    body:'enabled='+(enabled?'1':'0')+'&position='+position\n");
-  html += F("  }).catch(function(e){ alert('Override update failed to reach the device: '+e); });\n");
+  html += F("  espPostForm('/override','enabled='+(enabled?'1':'0')+'&position='+position,{keepalive:true})\n");
+  html += F("    .catch(function(e){ alert('Override update failed to reach the device: '+e); });\n");
   html += F("}\n");
   html += F("function toggleGearLeverOverride(enabled){\n");
   html += F("  document.getElementById('gearLeverOverrideControls').style.display=enabled?'':'none';\n");
@@ -752,23 +775,11 @@ static void handleRoot()
   html += F("  postGearLeverOverride(document.getElementById('gearLeverOverrideEnabled').checked,position);\n");
   html += F("}\n");
   html += F("function sendGearLeverOverrideShift(which){\n");
-  html += F("  function attempt(retrying){\n");
-  html += F("    try {\n");
-  html += F("      fetch('/override/' + which, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'request=1' }).then(function(r){\n");
-  html += F("        if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
-  html += F("      }).catch(function(e){\n");
-  html += F("        // The ESP32 only serves one TCP client at a time, so this can collide with the\n");
-  html += F("        // 500ms debug polling above; retry once after a short delay before giving up.\n");
-  html += F("        if(!retrying) return setTimeout(function(){ attempt(true); },300);\n");
-  html += F("        alert('Shift request failed to reach the device: '+e);\n");
-  html += F("      });\n");
-  html += F("    } catch(e) {\n");
-  html += F("      // fetch() itself can throw synchronously (e.g. an unsupported option on an\n");
-  html += F("      // older browser) - .catch() above only handles promise rejections, not this.\n");
-  html += F("      alert('Shift request threw before it could be sent: '+e);\n");
-  html += F("    }\n");
-  html += F("  }\n");
-  html += F("  attempt(false);\n");
+  html += F("  espPostForm('/override/' + which,'request=1').then(function(r){\n");
+  html += F("    if(!r.ok) return r.text().then(function(t){ alert(t); });\n");
+  html += F("  }).catch(function(e){\n");
+  html += F("    alert('Shift request failed to reach the device: '+e);\n");
+  html += F("  });\n");
   html += F("}\n");
   html += F("if (window.history.replaceState) { window.history.replaceState(null, null, window.location.href); }\n");
   html += F("</script>");
